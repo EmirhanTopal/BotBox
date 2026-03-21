@@ -1,0 +1,26 @@
+services:
+  web:          # Django backend container
+    build: ./webapp
+    container_name: botbox_web
+    ports:
+      - "8000:8000"          # Web uygulaması
+    volumes:
+      - ./webapp:/app        # Local dosyalar container içine mount
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:           # PostgreSQL container
+    image: postgres:15
+    container_name: botbox_db
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+volumes:
+  postgres_data:
