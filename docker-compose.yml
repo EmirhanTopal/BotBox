@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 services:
   web:          # Django backend container
     build: ./webapp
@@ -23,4 +24,39 @@ services:
 
 
 volumes:
+=======
+services:
+  web:          # Django backend container
+    build: ./webapp
+    container_name: botbox_web
+    ports:
+      - "8000:8000"          # Web uygulaması
+    volumes:
+      - ./webapp:/app        # Local dosyalar container içine mount
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - llm
+
+  db:           # PostgreSQL container
+    image: postgres:15
+    container_name: botbox_db
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  llm:          # Ollama LLM container
+    image: ollama/llm:latest
+    container_name: botbox_llm
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./llm_models:/models
+
+volumes:
+>>>>>>> f827f8e (adding containers)
   postgres_data:
