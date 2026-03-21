@@ -10,7 +10,6 @@ services:
       - .env
     depends_on:
       - db
-      - llm
 
   db:           # PostgreSQL container
     image: postgres:15
@@ -22,13 +21,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-#  llm:          # Ollama LLM container
-#    image: ollama/llm:latest
-#    container_name: botbox_llm
-#    ports:
-#      - "11434:11434"
-#    volumes:
-#      - ./llm_models:/models
 
 volumes:
   postgres_data:
