@@ -2,6 +2,7 @@ services:
   web:
     build: ./webapp
     container_name: botbox_web
+    command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
     volumes:
@@ -9,8 +10,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
-    # llm servisi olmadan çalışacak
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:15
@@ -21,6 +22,13 @@ services:
       - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
 
 #  llm:
 #    image: ollama/llm:latest
