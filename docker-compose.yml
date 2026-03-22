@@ -1,12 +1,12 @@
 services:
   web:
-    build: ./webapp
+    build: ./webapp/BotBoxWeb
     container_name: botbox_web
     command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
     volumes:
-      - ./webapp:/app
+      - ./webapp/BotBoxWeb:/app
     env_file:
       - .env
     depends_on:
@@ -26,14 +26,6 @@ services:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       retries: 5
-
-#  llm:
-#    image: ollama/llm:latest
-#    container_name: botbox_llm
-#    ports:
-#      - "11434:11434"
-#    volumes:
-#      - ./llm_models:/models
 
 volumes:
   postgres_data:
