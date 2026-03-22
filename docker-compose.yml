@@ -27,9 +27,6 @@ services:
       interval: 5s
       retries: 5
 
-volumes:
-  postgres_data:
-
 #  llm:
 #    image: ollama/llm:latest
 #    container_name: botbox_llm
