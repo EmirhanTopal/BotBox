@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: botbox-web:latest
+          image: botbox-web:v5
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
