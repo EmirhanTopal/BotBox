@@ -1,35 +1,57 @@
-version: '3.8'
+version: '3.9'
 
 services:
+  db:
+    image: postgres:15
+    container_name: botbox_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   web:
     build: ./webapp/BotBoxWeb
     container_name: botbox_web
     command: >
       sh -c "python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
-    ports:
-      - "8000:8000"
     volumes:
       - ./webapp/BotBoxWeb:/app
+      - ./scraper:/app/scraper
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
+    environment:
+      DEBUG: ${DEBUG}
+      SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
     env_file:
       - .env
     depends_on:
       db:
         condition: service_healthy
 
-  db:
-    image: postgres:15
-    container_name: botbox_db
+  ollama:
+    image: ollama/ollama:latest
+    container_name: botbox_ollama
     ports:
-      - "5432:5432"
-    env_file:
-      - .env
+      - "11434:11434"
+    environment:
+      OLLAMA_MODELS: /root/.ollama/models
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      retries: 5
+      - ollama_data:/root/.ollama/models
 
 volumes:
   postgres_data:
+  ollama_data:

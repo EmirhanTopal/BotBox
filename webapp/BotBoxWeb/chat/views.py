@@ -1,94 +1,112 @@
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 import json
 import requests
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
-from django.conf import settings
-from django.views.decorators.csrf import csrf_exempt
-from .models import ChatSession, Message
+import logging
+from .models import ChatMessage, Program, Course, Department
+from .services.retrieval import RetrievalService
+from .services.llm_integration import LLMService
+
+logger = logging.getLogger(__name__)
+
+class ChatAPIView:
+    """Chat API endpoints"""
+    
+    def __init__(self):
+        self.retrieval = RetrievalService()
+        self.llm = LLMService()
+    
+    @csrf_exempt
+    @require_http_methods(["POST"])
+    def chat(request):
+        """Main chat endpoint"""
+        try:
+            data = json.loads(request.body)
+            question = data.get('question', '').strip()
+            
+            if not question:
+                return JsonResponse({
+                    'error': 'Question is required'
+                }, status=400)
+            
+            # Retrieve relevant information
+            chat_view = ChatAPIView()
+            context = chat_view.retrieval.retrieve(question)
+            
+            # Generate answer using LLM
+            answer = chat_view.llm.generate_answer(question, context)
+            
+            # Store in database
+            chat_msg = ChatMessage.objects.create(
+                question=question,
+                answer=answer['text'],
+                sources=answer.get('sources', []),
+                confidence=answer.get('confidence', 0.0)
+            )
+            
+            return JsonResponse({
+                'id': chat_msg.id,
+                'question': question,
+                'answer': answer['text'],
+                'sources': answer.get('sources', []),
+                'confidence': answer.get('confidence', 0.0)
+            }, status=200)
+        
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'error': 'Invalid JSON'
+            }, status=400)
+        except Exception as e:
+            logger.error(f"Chat error: {e}")
+            return JsonResponse({
+                'error': 'Internal server error'
+            }, status=500)
 
 
-def index(request):
-    sessions = ChatSession.objects.all()
-    return render(request, 'chat/index.html', {'sessions': sessions})
+@csrf_exempt
+def chat(request):
+    """Chat endpoint"""
+    return ChatAPIView.chat(request)
 
 
-def session_detail(request, session_id):
-    sessions = ChatSession.objects.all()
-    current = get_object_or_404(ChatSession, id=session_id)
-    messages = current.messages.all()
-    return render(request, 'chat/index.html', {
-        'sessions': sessions,
-        'current_session': current,
-        'messages': messages,
+@require_http_methods(["GET"])
+def programs_list(request):
+    """List all programs"""
+    programs = Program.objects.all().values('id', 'name', 'level', 'department')
+    return JsonResponse({
+        'count': programs.count(),
+        'programs': list(programs)
     })
 
 
-@csrf_exempt
-def new_session(request):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST gerekli'}, status=405)
-    session = ChatSession.objects.create()
-    return JsonResponse({'session_id': session.id})
+@require_http_methods(["GET"])
+def courses_list(request):
+    """List all courses"""
+    courses = Course.objects.all().values('id', 'code', 'name', 'credits')
+    return JsonResponse({
+        'count': courses.count(),
+        'courses': list(courses)
+    })
 
 
-@csrf_exempt
-def chat_api(request, session_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST gerekli'}, status=405)
-
-    session = get_object_or_404(ChatSession, id=session_id)
-
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Geçersiz JSON'}, status=400)
-
-    question = data.get('question', '').strip()
-    if not question:
-        return JsonResponse({'error': 'Soru boş olamaz'}, status=400)
-
-    if not session.messages.exists():
-        session.title = question[:60]
-        session.save()
-
-    Message.objects.create(session=session, role='user', content=question)
-
-    answer = ask_llm(session, question)
-
-    Message.objects.create(session=session, role='bot', content=answer)
-
-    return JsonResponse({'answer': answer})
+@require_http_methods(["GET"])
+def departments_list(request):
+    """List all departments"""
+    depts = Department.objects.all().values('id', 'name', 'email', 'phone')
+    return JsonResponse({
+        'count': depts.count(),
+        'departments': list(depts)
+    })
 
 
-def ask_llm(session, question):
-    history = session.messages.order_by('created_at')
-    history_text = ""
-    for msg in history:
-        prefix = "Kullanıcı" if msg.role == 'user' else "Asistan"
-        history_text += f"{prefix}: {msg.content}\n"
-
-    prompt = f"""Sen Acıbadem Üniversitesi hakkında bilgi veren yardımcı bir asistansın.
-Soruları Türkçe olarak yanıtla.
-
-{history_text}
-Asistan:"""
-
-    try:
-        response = requests.post(
-            f"{settings.OLLAMA_URL}/api/generate",
-            json={
-                "model": settings.OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False,
-            },
-            timeout=120
-        )
-        if response.status_code == 200:
-            return response.json().get("response", "Yanıt alınamadı.")
-        return f"LLM servisi hata döndürdü (HTTP {response.status_code})."
-    except requests.exceptions.ConnectionError:
-        return "⚠️ LLM servisi şu anda çalışmıyor."
-    except requests.exceptions.Timeout:
-        return "⚠️ LLM zaman aşımına uğradı, tekrar deneyin."
-    except Exception as e:
-        return f"⚠️ Hata: {str(e)}"
+@require_http_methods(["GET"])
+def health(request):
+    """Health check endpoint"""
+    return JsonResponse({
+        'status': 'healthy',
+        'programs': Program.objects.count(),
+        'courses': Course.objects.count(),
+        'departments': Department.objects.count()
+    })
