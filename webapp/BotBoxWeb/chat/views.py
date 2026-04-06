@@ -110,3 +110,27 @@ def health(request):
         'courses': Course.objects.count(),
         'departments': Department.objects.count()
     })
+
+@require_http_methods(["GET"])
+def index(request):
+    """Ana sayfa"""
+    return JsonResponse({'status': 'ok', 'message': 'BotBox API'})
+
+
+@require_http_methods(["GET", "POST"])
+def new_session(request):
+    """Yeni oturum"""
+    return JsonResponse({'session_id': 1})
+
+
+@require_http_methods(["GET"])
+def session_detail(request, session_id):
+    """Oturum detayı"""
+    return JsonResponse({'session_id': session_id})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def chat_api(request, session_id):
+    """Session bazlı chat endpoint"""
+    return ChatAPIView.chat(request)

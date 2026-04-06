@@ -17,7 +17,7 @@ class TestChatAPI(TestCase):
     def test_chat_endpoint_post(self):
         """Test chat endpoint accepts POST"""
         response = self.client.post(
-            '/api/chat/',
+            '/api/chat/1/',
             data=json.dumps({'question': 'Test'}),
             content_type='application/json'
         )

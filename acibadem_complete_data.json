@@ -1,0 +1,588 @@
+{
+  "static_content": {
+    "general_info": {
+      "title": "Home | Acıbadem Üniversitesi",
+      "meta_description": "",
+      "hero_text": "",
+      "mission": "Ana gezinti menüsü University Student Academic Research Sustainable Campus International Turkish English Ana gezinti menüsü University Student Academic Research Sustainable Campus International About Research & Application Centers Rules & Regulations Instructor's Handbook 2021-2022 Additional Units Tenders Student Affairs About Payment Life at ACU BademNET Orientation Program Graduation Projects Expo Undergraduate Programs School of Medicine Faculty of Pharmacy Faculty of Health Sciences Faculty",
+      "vision": "Ana gezinti menüsü University Student Academic Research Sustainable Campus International Turkish English Ana gezinti menüsü University Student Academic Research Sustainable Campus International About Research & Application Centers Rules & Regulations Instructor's Handbook 2021-2022 Additional Units Tenders Student Affairs About Payment Life at ACU BademNET Orientation Program Graduation Projects Expo Undergraduate Programs School of Medicine Faculty of Pharmacy Faculty of Health Sciences Faculty",
+      "founded_year": "2007",
+      "campuses": [
+        "Kerem Aydınlar Campus (Ataşehir, Istanbul)"
+      ]
+    },
+    "departments": [
+      {
+        "name": "FACULTIES",
+        "description": "School of Medicine (English)",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "INSTITUTES",
+        "description": "Institute of Health Sciences",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "Vocational Schools",
+        "description": "Vocational School of Health Services",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "DEPARTMENTS AFFILIATED TO THE RECTORATE",
+        "description": "Ataturk's Principles and History of Turkish RevolutionTurkish LanguageForeign Languages",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "UNITS ASSOCIATED WITH THE RECTORATE",
+        "description": "Disabled Student UnitQuality Development and Management UnitAcıbadem University Scientific Research Projects Support Commission (ABAPKO)Biodesign Application and Research CenterIncubation CenterMedical Research Ethics CommitteeClinical Research Ethics CommitteeAnimal Experiments Local Ethics Committ",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "CENTERS",
+        "description": "Clinical Simulation and Advanced Endoscopic – Robotic Surgery Training Center – CASELaboratory Animals Application and Research Center – ACUDEHAMRare Diseases and Orphan Drugs Application and Research Center – ACURAREFighting Crime and Violence Application and Research Center – ASUMAContinuous Educa",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "YÜKSEKOKULLAR",
+        "description": "Sağlık Hizmetleri Meslek Yüksekokulu",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "REKTÖRLÜĞE BAĞLI BÖLÜMLER",
+        "description": "Atatürk İlkeleri ve İnkılap TarihiTürk DiliYabancı Diller",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "REKTÖRLÜĞE BAĞLI BİRİMLER",
+        "description": "Engelli Öğrenci BirimiKalite Geliştirme ve Yönetimi BirimiAcıbadem Üniversitesi Bilimsel Araştırma Projeleri Destekleme Komisyonu (ABAPKO)Biyotasarım MerkeziKuluçka MerkeziTıbbi Araştırmalar Etik KuruluKlinik Araştırmalar Etik KuruluHayvan Deneyleri Yerel Etik KuruluKomisyonlar",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "MERKEZLER",
+        "description": "Klinik Simülasyon ve İleri Düzey Endoskopik – Robotik Cerrahi Eğitim Merkezi – CASEDeney Hayvanları Uygulama ve Araştırma Merkezi – ACUDEHAMNadir Hastalıklar ve Yetim İlaçlar Uygulama ve Araştırma Merkezi – ACURARESuç ve Şiddetle Mücadele Uygulama ve Araştırma Merkezi – ASUMASürekli Eğitim ve Gelişi",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      }
+    ],
+    "programs": [
+      {
+        "name": "Undergraduate ProgramsSchool of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering a",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Undergraduate ProgramsSchool of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering a",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Undergraduate ProgramsSchool of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering a",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering and Natural Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of Medicine",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Pharmacy",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/eczacilik-fakultesi/faculty-pharmacy",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Engineering and Natural Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/muhendislik-ve-doga-bilimleri-fakultesi",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Undergraduate ProgramsSchool of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering a",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Undergraduate ProgramsSchool of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering a",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Undergraduate ProgramsSchool of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering a",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering and Natural Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of Medicine",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Pharmacy",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/eczacilik-fakultesi/faculty-pharmacy",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Engineering and Natural Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/muhendislik-ve-doga-bilimleri-fakultesi",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of MedicineFaculty of PharmacyFaculty of Engineering and Natural SciencesFaculty of Humanities and Social SciencesFaculty of Health Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of MedicineFaculty of PharmacyFaculty of Engineering and Natural SciencesFaculty of Humanities and Social SciencesFaculty of Health Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of MedicineFaculty of PharmacyFaculty of Engineering and Natural SciencesFaculty of Humanities and Social SciencesFaculty of Health Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of MedicineFaculty of PharmacyFaculty of Engineering and Natural SciencesFaculty of Humanities and Social SciencesFaculty of Health Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of MedicineFaculty of PharmacyFaculty of Engineering and Natural SciencesFaculty of Humanities and Social SciencesFaculty of Health Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of Medicine",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of Medicine",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of Medicine",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Pharmacy",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/eczacilik-fakultesi/faculty-pharmacy",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Pharmacy",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/eczacilik-fakultesi/faculty-pharmacy",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Pharmacy",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/eczacilik-fakultesi/faculty-pharmacy",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Engineering and Natural Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/muhendislik-ve-doga-bilimleri-fakultesi",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Engineering and Natural Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/muhendislik-ve-doga-bilimleri-fakultesi",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Engineering and Natural Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/muhendislik-ve-doga-bilimleri-fakultesi",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      }
+    ],
+    "admissions": {},
+    "contact_info": {
+      "main_phone": "021-2022",
+      "main_email": "tanitim@acibadem.edu.tr",
+      "addresses": [
+        "Kayışdağı Cd. No:32, Ataşehir, İstanbul"
+      ],
+      "social_media": {},
+      "departments_contact": [
+        "Ana gezinti menüsü University Student Academic Research Sustainable Campus International Turkish English Ana gezinti menüsü University Student Academic Research Sustainable Campus International About ",
+        "Home University About Home University About Administrative Departments University About Vision, Mission & Core Values Why ACU? University Governance Administrative Departments Corporate Identity Unive",
+        "Home University About Administrative Departments University About Vision, Mission & Core Values Why ACU? University Governance Administrative Departments Corporate Identity University’s Legal Basis Ac",
+        "Prospective Student Relations and Promotion Directorate 0216 500 41 34–58–59 | tanitim@acibadem.edu.tr Directorate of Student Affairs Click for the webpage. 0216 500 42 40 | ogrenci.isleri@acibadem.ed",
+        "Prospective Student Relations and Promotion Directorate 0216 500 41 34–58–59 | tanitim@acibadem.edu.tr Directorate of Student Affairs Click for the webpage. 0216 500 42 40 | ogrenci.isleri@acibadem.ed",
+        "Prospective Student Relations and Promotion Directorate 0216 500 41 34–58–59 | tanitim@acibadem.edu.tr Directorate of Student Affairs Click for the webpage. 0216 500 42 40 | ogrenci.isleri@acibadem.ed",
+        "0216 500 41 34–58–59 | tanitim@acibadem.edu.tr",
+        "0216 500 42 40 | ogrenci.isleri@acibadem.edu.tr",
+        "0216 500 44 00 | intoffice@acibadem.edu.tr",
+        "0216 500 44 64 | kutuphane@acibadem.edu.tr",
+        "0216 577 35 35–63 33 | acuogrenciyurdu@acibadem.edu.tr",
+        "0216 500 44 34 | acu.sks@acibadem.edu.tr",
+        "0216 500 40 84 | kariyermerkezi@acibadem.edu.tr",
+        "0216 500 44 30 | sistem@acibadem.edu.tr",
+        "0216 500 44 45 | mali.isler@acibadem.edu.tr",
+        "0216 500 44 44 | ik@acibadem.edu.tr",
+        "0216 500 41 11 | kurumsal.iletisim@acibadem.edu.tr",
+        "0216 500 42 88 | isletme@acibadem.edu.tr",
+        "0216 500 40 95 | teknikhizmetler@acibadem.edu.tr",
+        "0216 500 44 70 | tto@acibadem.edu.tr",
+        "0216 500 44 71 | acutekmer@acibadem.wedu.tr",
+        "0216 500 43 33 | asegem@acibadem.edu.tr",
+        "0216 500 42 00–25 | infocase@acibadem.edu.tr",
+        "0216 500 44 19 | acudeham@acibadem.edu.tr",
+        "0216 500 44 06 | uzem@acibadem.edu.tr",
+        "0216 500 41 55–97 | acukalite@acbadem.edu.tr",
+        "0216 500 40 15–17–13 | ikakademik@acibadem.edu.tr",
+        "UNIVERSITY Contact Distance Learning Personal Data Protection Protection of Personal Data Quality Assurance System Tenders ACADEMIC Undergraduate Programs Associate Degree Programs Graduate Programs S",
+        "Kerem Aydınlar Campus Kayışdağı cad. No:32 Ataşehir/İstanbul +90 0216 500 44 44 info@acibadem.edu.tr",
+        "Kerem Aydınlar Campus Kayışdağı cad. No:32 Ataşehir/İstanbul +90 0216 500 44 44 info@acibadem.edu.tr",
+        "Kerem Aydınlar Campus Kayışdağı cad. No:32 Ataşehir/İstanbul +90 0216 500 44 44 info@acibadem.edu.tr",
+        "+90 0216 500 44 44",
+        "info@acibadem.edu.tr"
+      ],
+      "source": "acibadem.edu.tr"
+    },
+    "campus_facilities": [],
+    "pages": []
+  },
+  "dynamic_content": {
+    "programs": [],
+    "courses": [],
+    "curriculum": [],
+    "requirements": []
+  },
+  "merged_data": {
+    "all_programs": [
+      {
+        "name": "Undergraduate ProgramsSchool of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering a",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of MedicineFaculty of PharmacyFaculty of Health SciencesFaculty of Humanities and Social SciencesFaculty of Engineering and Natural Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of Medicine",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Pharmacy",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/eczacilik-fakultesi/faculty-pharmacy",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "Faculty of Engineering and Natural Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/muhendislik-ve-doga-bilimleri-fakultesi",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      },
+      {
+        "name": "School of MedicineFaculty of PharmacyFaculty of Engineering and Natural SciencesFaculty of Humanities and Social SciencesFaculty of Health Sciences",
+        "level": "Undergraduate",
+        "duration": "",
+        "department": "",
+        "language": "",
+        "tuition": "",
+        "link": "https://www.acibadem.edu.tr/en/akademik/lisans/tip-fakultesi/school-medicine",
+        "source": "acibadem.edu.tr/undergrad-programs"
+      }
+    ],
+    "all_departments": [
+      {
+        "name": "FACULTIES",
+        "description": "School of Medicine (English)",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "INSTITUTES",
+        "description": "Institute of Health Sciences",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "Vocational Schools",
+        "description": "Vocational School of Health Services",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "DEPARTMENTS AFFILIATED TO THE RECTORATE",
+        "description": "Ataturk's Principles and History of Turkish RevolutionTurkish LanguageForeign Languages",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "UNITS ASSOCIATED WITH THE RECTORATE",
+        "description": "Disabled Student UnitQuality Development and Management UnitAcıbadem University Scientific Research Projects Support Commission (ABAPKO)Biodesign Application and Research CenterIncubation CenterMedical Research Ethics CommitteeClinical Research Ethics CommitteeAnimal Experiments Local Ethics Committ",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "CENTERS",
+        "description": "Clinical Simulation and Advanced Endoscopic – Robotic Surgery Training Center – CASELaboratory Animals Application and Research Center – ACUDEHAMRare Diseases and Orphan Drugs Application and Research Center – ACURAREFighting Crime and Violence Application and Research Center – ASUMAContinuous Educa",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "YÜKSEKOKULLAR",
+        "description": "Sağlık Hizmetleri Meslek Yüksekokulu",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "REKTÖRLÜĞE BAĞLI BÖLÜMLER",
+        "description": "Atatürk İlkeleri ve İnkılap TarihiTürk DiliYabancı Diller",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "REKTÖRLÜĞE BAĞLI BİRİMLER",
+        "description": "Engelli Öğrenci BirimiKalite Geliştirme ve Yönetimi BirimiAcıbadem Üniversitesi Bilimsel Araştırma Projeleri Destekleme Komisyonu (ABAPKO)Biyotasarım MerkeziKuluçka MerkeziTıbbi Araştırmalar Etik KuruluKlinik Araştırmalar Etik KuruluHayvan Deneyleri Yerel Etik KuruluKomisyonlar",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      },
+      {
+        "name": "MERKEZLER",
+        "description": "Klinik Simülasyon ve İleri Düzey Endoskopik – Robotik Cerrahi Eğitim Merkezi – CASEDeney Hayvanları Uygulama ve Araştırma Merkezi – ACUDEHAMNadir Hastalıklar ve Yetim İlaçlar Uygulama ve Araştırma Merkezi – ACURARESuç ve Şiddetle Mücadele Uygulama ve Araştırma Merkezi – ASUMASürekli Eğitim ve Gelişi",
+        "link": "https://www.acibadem.edu.tr/en/kayit/iletisim/ulasim",
+        "email": "",
+        "phone": "",
+        "source": "acibadem.edu.tr"
+      }
+    ],
+    "complete_info": []
+  },
+  "metadata": {
+    "scrape_date": "2026-04-06T23:09:47.793289",
+    "sources": [
+      "acibadem.edu.tr",
+      "obs.acibadem.edu.tr"
+    ],
+    "static_success": true,
+    "dynamic_success": true
+  }
+}
