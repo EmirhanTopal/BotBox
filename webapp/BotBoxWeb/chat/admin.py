@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UniversityInfo, Department, Program, Course, ChatMessage, ScrapingLog
+from .models import UniversityInfo, Department, Program, Course, ChatMessage, ScrapingLog, ChatSession, Message
 
 @admin.register(UniversityInfo)
 class UniversityInfoAdmin(admin.ModelAdmin):
@@ -39,3 +39,16 @@ class ScrapingLogAdmin(admin.ModelAdmin):
     list_display = ('status', 'items_scraped', 'start_time', 'end_time')
     list_filter = ('status', 'start_time')
     readonly_fields = ('start_time', 'end_time')
+
+@admin.register(ChatSession)
+class ChatSessionAdmin(admin.ModelAdmin):
+    list_display = ('title', 'created_at', 'updated_at')
+    search_fields = ('title',)
+    readonly_fields = ('created_at', 'updated_at')
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ('session', 'role', 'content', 'created_at')
+    search_fields = ('content',)
+    list_filter = ('role', 'created_at')
+    readonly_fields = ('created_at',)

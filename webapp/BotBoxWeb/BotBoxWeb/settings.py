@@ -1,4 +1,5 @@
 import os
+import dj_database_url
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -48,14 +49,18 @@ TEMPLATES = [
 WSGI_APPLICATION = 'BotBoxWeb.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'botboxdb'),
-        'USER': os.environ.get('POSTGRES_USER', 'postgres'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-    }
+    'default': dj_database_url.config(
+        default=(
+            f"postgresql://"
+            f"{os.environ.get('POSTGRES_USER', 'postgres')}:"
+            f"{os.environ.get('POSTGRES_PASSWORD', 'postgres')}@"
+            f"{os.environ.get('POSTGRES_HOST', 'db')}:"
+            f"{os.environ.get('POSTGRES_PORT', '5432')}/"
+            f"{os.environ.get('POSTGRES_DB', 'botboxdb')}"
+        ),
+        conn_max_age=600,
+        ssl_require=os.environ.get('DB_SSL', 'False') == 'True',
+    )
 }
 
 STATIC_URL = '/static/'
