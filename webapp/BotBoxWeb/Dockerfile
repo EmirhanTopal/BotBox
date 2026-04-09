@@ -14,6 +14,8 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
 
+ENV PYTHONPATH=/app
+
 WORKDIR /app/webapp/BotBoxWeb
 
 EXPOSE 8000

@@ -2,9 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web
-  namespace: botbox
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: web
@@ -15,11 +14,13 @@ spec:
     spec:
       containers:
         - name: web
-          image: <ACR_NAME>.azurecr.io/botbox-web:latest
-          imagePullPolicy: Always
+          image: botbox-web:v14 #<ACR_NAME>.azurecr.io/botbox-web:v8
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
           env:
+            - name: PYTHONPATH
+              value: "/app"
             - name: DEBUG
               value: "False"
             - name: DB_SSL
@@ -40,6 +41,10 @@ spec:
             - sh
             - -c
             - |
+              until python -c "import socket; s=socket.create_connection(('db',5432),2)" 2>/dev/null; do
+                echo "DB bekleniyor..."
+                sleep 2
+              done
               python manage.py migrate &&
               python manage.py collectstatic --noinput &&
               python manage.py runserver 0.0.0.0:8000

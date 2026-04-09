@@ -41,7 +41,7 @@ class Command(BaseCommand):
             # Load into database
             loader = DataLoader('data/acibadem_complete_data.json')
             loader.load_json()
-            loader.load_into_db()
+            loader.load_all()
             
             # Update log
             log.status = 'success'
