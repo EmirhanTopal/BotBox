@@ -1,7 +1,3 @@
-"""
-Scraper configuration settings
-"""
-
 SCRAPER_CONFIG = {
     'static_url': 'https://www.acibadem.edu.tr/en',
     'dynamic_url': 'https://obs.acibadem.edu.tr/oibs/bologna/index.aspx',
@@ -12,13 +8,13 @@ SCRAPER_CONFIG = {
     'retries': 3
 }
 
-SELENIUM_CONFIG = {
-    'chrome_options': [
-        '--headless',
+PLAYWRIGHT_CONFIG = {
+    'browser_args': [
         '--no-sandbox',
         '--disable-dev-shm-usage',
         '--disable-blink-features=AutomationControlled'
     ],
-    'wait_timeout': 15,
-    'page_load_timeout': 30
+    'default_timeout': 30000,   # ms
+    'network_idle_timeout': 15000,
+    'page_load_timeout': 30000
 }
