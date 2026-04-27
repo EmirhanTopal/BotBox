@@ -19,6 +19,12 @@ spec:
           ports:
             - containerPort: 8000
           env:
+            - name: DB_NAME
+              value: botboxdb
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              value: postgres
             - name: DB_HOST
               value: db
             - name: DB_PORT

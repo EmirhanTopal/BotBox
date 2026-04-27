@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional, Set
 from urllib.parse import urljoin, urlparse, parse_qs
-
+from asgiref.sync import sync_to_async
 import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, Browser, Page
@@ -91,11 +91,12 @@ class AcibademDualScraper:
         try:
             self._playwright = sync_playwright().start()
             self._browser = self._playwright.chromium.launch(
-                headless=self.use_headless,
+                headless=True,
                 args=[
                     "--no-sandbox",
+                    "--disable-setuid-sandbox",
                     "--disable-dev-shm-usage",
-                    "--disable-blink-features=AutomationControlled",
+                    "--disable-gpu",
                 ],
             )
             self._page = self._browser.new_page(
