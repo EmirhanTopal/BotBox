@@ -10,7 +10,6 @@
 
     .app { display: flex; height: 100vh; }
 
-    /* SIDEBAR */
     .sidebar { width: 260px; min-width: 260px; background: #171717; display: flex; flex-direction: column; padding: 12px 8px; }
 
     .brand { display: flex; align-items: center; gap: 10px; padding: 8px 10px 16px; border-bottom: 1px solid #2f2f2f; margin-bottom: 10px; font-weight: 700; font-size: 1rem; color: #fff; }
@@ -30,10 +29,8 @@
     .s-item.active { background: #2f2f2f; color: #fff; }
     .no-session-txt { font-size: .8rem; color: #555; padding: 10px 12px; }
 
-    /* CHAT */
     .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* Boş ekran */
     .empty-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 40px; text-align: center; }
     .empty-icon { width: 64px; height: 64px; background: #003580; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2rem; }
     .empty-screen h2 { font-size: 1.5rem; color: #fff; }
@@ -42,7 +39,6 @@
     .chip { padding: 9px 16px; background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 20px; font-size: .83rem; color: #ccc; cursor: pointer; transition: background .2s; }
     .chip:hover { background: #3a3a3a; color: #fff; }
 
-    /* Mesajlar */
     .messages-wrap { flex: 1; overflow-y: auto; padding: 24px 0; display: flex; flex-direction: column; }
     .messages-wrap::-webkit-scrollbar { width: 5px; }
     .messages-wrap::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
@@ -55,17 +51,15 @@
     .msg-row.user .av { background: #003580; order: 2; }
     .msg-row.bot  .av { background: #3a3a3a; }
 
-    .msg-text { max-width: 640px; font-size: .93rem; line-height: 1.65; color: #e8e8e8; padding-top: 4px; }
+    .msg-text { max-width: 640px; font-size: .93rem; line-height: 1.65; color: #e8e8e8; padding-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
     .msg-row.user .msg-text { text-align: right; }
 
-    /* Typing */
     .typing-row { padding: 14px 12%; display: none; gap: 12px; align-items: center; background: #2a2a2a; }
     .dot { display: inline-block; width: 7px; height: 7px; background: #aaa; border-radius: 50%; margin: 0 2px; animation: blink .9s infinite; }
     .dot:nth-child(2) { animation-delay: .15s; }
     .dot:nth-child(3) { animation-delay: .30s; }
     @keyframes blink { 0%,60%,100%{opacity:.3;transform:translateY(0)} 30%{opacity:1;transform:translateY(-4px)} }
 
-    /* Input */
     .input-area { padding: 14px 12%; }
     .input-box { display: flex; align-items: flex-end; background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 14px; padding: 10px 12px; gap: 10px; }
     .input-box:focus-within { border-color: #555; }
@@ -96,7 +90,7 @@
     <div class="session-list">
       {% for s in sessions %}
         <a href="/session/{{ s.id }}/"
-           class="s-item {% if current_session and current_session.id == s.id %}active{% endif %}">
+            class="s-item {% if current_session and current_session.id == s.id %}active{% endif %}">
           {{ s.title|truncatechars:34 }}
         </a>
       {% empty %}
@@ -105,7 +99,8 @@
     </div>
   </aside>
 
-  <main class="chat-area">
+  <main class="chat-area" data-session-id="{% if current_session %}{{ current_session.id }}{% endif %}">
+
 
     {% if not current_session %}
       <div class="empty-screen">
@@ -121,13 +116,12 @@
           <div class="chip" onclick="chipClick(this)">İletişim bilgileri nelerdir?</div>
         </div>
       </div>
-
     {% else %}
       <div class="messages-wrap" id="msgsWrap">
         {% for msg in messages %}
           <div class="msg-row {{ msg.role }}">
             <div class="av">{% if msg.role == 'user' %}👤{% else %}🎓{% endif %}</div>
-            <div class="msg-text">{{ msg.content|linebreaksbr }}</div>
+            <div class="msg-text">{{ msg.content }}</div>
           </div>
         {% endfor %}
       </div>
@@ -155,7 +149,18 @@
 </div>
 
 <script>
-  const SID = {% if current_session %}{{ current_session.id }}{% else %}null{% endif %};
+  const CHAT_AREA = document.querySelector('.chat-area');
+  const SID_VALUE = CHAT_AREA.dataset.sessionId;
+  const SID = SID_VALUE ? Number(SID_VALUE) : null;
+
+  const CSRF_TOKEN = '{{ csrf_token }}';
+
+  function csrfHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': CSRF_TOKEN
+    };
+  }
 
   function autoResize(el) {
     el.style.height = 'auto';
@@ -163,19 +168,45 @@
   }
 
   function handleKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
   }
 
   async function createSession() {
-    const r = await fetch('/session/new/', { method: 'POST' });
+    const r = await fetch('/session/new/', {
+      method: 'POST',
+      headers: csrfHeaders(),
+      credentials: 'same-origin'
+    });
+
     const d = await r.json();
+
+    if (!r.ok) {
+      alert(d.error || 'Sohbet oluşturulamadı.');
+      return;
+    }
+
     location.href = `/session/${d.session_id}/`;
   }
 
   async function chipClick(el) {
     const txt = el.textContent.trim();
-    const r = await fetch('/session/new/', { method: 'POST' });
+
+    const r = await fetch('/session/new/', {
+      method: 'POST',
+      headers: csrfHeaders(),
+      credentials: 'same-origin'
+    });
+
     const d = await r.json();
+
+    if (!r.ok) {
+      alert(d.error || 'Sohbet oluşturulamadı.');
+      return;
+    }
+
     sessionStorage.setItem('pending', txt);
     location.href = `/session/${d.session_id}/`;
   }
@@ -188,20 +219,37 @@
   function addMsg(role, text) {
     const w = document.getElementById('msgsWrap');
     if (!w) return;
+
     const row = document.createElement('div');
     row.className = `msg-row ${role}`;
-    row.innerHTML = `
-      <div class="av">${role === 'user' ? '👤' : '🎓'}</div>
-      <div class="msg-text">${text.replace(/\n/g, '<br>')}</div>`;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'av';
+    avatar.textContent = role === 'user' ? '👤' : '🎓';
+
+    const msg = document.createElement('div');
+    msg.className = 'msg-text';
+    msg.textContent = text;
+
+    row.appendChild(avatar);
+    row.appendChild(msg);
     w.appendChild(row);
+
     scrollDown();
   }
 
   async function send() {
     const inp = document.getElementById('msgInput');
     const btn = document.getElementById('sendBtn');
-    const q   = inp.value.trim();
-    if (!q || !SID) return;
+    const q = inp.value.trim();
+
+    if (!q) return;
+
+    if (!SID) {
+      sessionStorage.setItem('pending', q);
+      await createSession();
+      return;
+    }
 
     inp.value = '';
     inp.style.height = 'auto';
@@ -209,19 +257,29 @@
     addMsg('user', q);
 
     const tr = document.getElementById('typingRow');
-    if (tr) { tr.style.display = 'flex'; scrollDown(); }
+    if (tr) {
+      tr.style.display = 'flex';
+      scrollDown();
+    }
 
     try {
       const r = await fetch(`/api/chat/${SID}/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
+        credentials: 'same-origin',
         body: JSON.stringify({ question: q })
       });
-      const d = await r.json();
-      if (tr) tr.style.display = 'none';
-      addMsg('bot', r.ok ? d.answer : '⚠️ ' + (d.error || 'Hata oluştu.'));
 
-      // Sidebar başlığını güncelle
+      const d = await r.json();
+
+      if (tr) tr.style.display = 'none';
+
+      if (r.ok) {
+        addMsg('bot', d.answer || 'Cevap alınamadı.');
+      } else {
+        addMsg('bot', '⚠️ ' + (d.error || 'Hata oluştu.'));
+      }
+
       const active = document.querySelector('.s-item.active');
       if (active && active.textContent.trim() === 'Yeni Sohbet') {
         active.textContent = q.substring(0, 34) + (q.length > 34 ? '…' : '');
@@ -237,7 +295,9 @@
 
   window.addEventListener('load', () => {
     scrollDown();
+
     const p = sessionStorage.getItem('pending');
+
     if (p && SID) {
       sessionStorage.removeItem('pending');
       document.getElementById('msgInput').value = p;

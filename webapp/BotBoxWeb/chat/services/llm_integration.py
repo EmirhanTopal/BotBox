@@ -59,6 +59,9 @@ class LLMService:
         """Build prompt with context"""
         
         context_text = "Use the following information to answer the question:\n\n"
+
+        if context.get('summary'):
+            context_text += f"Summary: {context['summary']}\n\n"
         
         if context.get('general_info'):
             info = context['general_info']
