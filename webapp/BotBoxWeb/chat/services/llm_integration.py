@@ -1,125 +1,180 @@
 """LLM integration service"""
 
 import requests
-import json
 import logging
 import os
 
 logger = logging.getLogger(__name__)
 
+
 class LLMService:
     """
     Integration with Ollama LLM service
     """
-    
+
     def __init__(self):
         self.ollama_url = os.getenv('OLLAMA_URL', 'http://ollama:11434')
         self.model = os.getenv('OLLAMA_MODEL', 'mistral')
-    
+
     def generate_answer(self, question: str, context: dict) -> dict:
-        """
-        Generate answer using LLM
-        """
-        
-        # Build prompt with context
+
         prompt = self._build_prompt(question, context)
-        
+
         try:
-            # Call Ollama API
             response = requests.post(
                 f"{self.ollama_url}/api/generate",
                 json={
                     "model": self.model,
                     "prompt": prompt,
                     "stream": False,
-                    "temperature": 0.3
+                    "temperature": 0.2
                 },
                 timeout=60
             )
-            
+
             if response.status_code == 200:
                 result = response.json()
                 return {
-                    'text': result.get('response', '').strip(),
-                    'sources': context.get('sources', []),
-                    'confidence': 0.8
+                    "text": result.get("response", "").strip(),
+                    "sources": context.get("sources", []),
+                    "confidence": 0.85
                 }
-            else:
-                logger.error(f"Ollama API error: {response.status_code}")
-                return self._fallback_answer(question, context)
-        
-        except requests.exceptions.ConnectionError:
-            logger.error("Cannot connect to Ollama service")
+
+            logger.error(f"Ollama error: {response.status_code}")
             return self._fallback_answer(question, context)
+
         except Exception as e:
             logger.error(f"LLM error: {e}")
             return self._fallback_answer(question, context)
-    
+
     def _build_prompt(self, question: str, context: dict) -> str:
-        """Build prompt with context"""
-        
-        context_text = "Use the following information to answer the question:\n\n"
+        """
+        Semantic ve structured veriden okunabilir bir prompt üretir.
+        """
 
-        if context.get('summary'):
-            context_text += f"Summary: {context['summary']}\n\n"
-        
-        if context.get('general_info'):
-            info = context['general_info']
-            context_text += f"University: {info.get('title', '')}\n"
-            context_text += f"Description: {info.get('description', '')}\n"
-            if info.get('phone'):
-                context_text += f"Contact: {info.get('phone', '')}\n"
-            context_text += "\n"
-        
-        if context.get('programs'):
-            context_text += "Available Programs:\n"
-            for prog in context['programs'][:3]:
-                context_text += f"- {prog['name']} ({prog['level']})\n"
-            context_text += "\n"
-        
-        if context.get('courses'):
-            context_text += "Available Courses:\n"
-            for course in context['courses'][:3]:
-                context_text += f"- {course['code']}: {course['name']}\n"
-            context_text += "\n"
-        
-        if context.get('departments'):
-            context_text += "Departments:\n"
-            for dept in context['departments'][:3]:
-                context_text += f"- {dept['name']}: {dept['email']}\n"
-            context_text += "\n"
-        
-        prompt = f"""You are a helpful assistant for Acibadem University.
+        # --- Semantic sonuçları okunabilir metne çevir ---
+        semantic_lines = []
+        for s in context.get("semantic", []):
+            if s["type"] == "program":
+                line = f"  - [Program] {s['name']}"
+                if s.get("level"):
+                    line += f" ({s['level']})"
+                if s.get("desc"):
+                    line += f": {s['desc'][:150]}"
+                semantic_lines.append(line)
+            elif s["type"] == "course":
+                semantic_lines.append(f"  - [Course] {s['name']} — Kod: {s.get('code', '')}")
+            elif s["type"] == "department":
+                line = f"  - [Department] {s['name']}"
+                if s.get("desc"):
+                    line += f": {s['desc'][:150]}"
+                semantic_lines.append(line)
 
-{context_text}
+        semantic_text = "\n".join(semantic_lines) if semantic_lines else "  (Semantic sonuç bulunamadı)"
 
-Question: {question}
+        # --- Structured veriler ---
+        programs_text = ""
+        if context.get("programs"):
+            programs_text = "\n".join([
+                f"  - {p['name']} | {p.get('level', '')} | {p.get('department', '')}"
+                for p in context["programs"]
+            ])
 
-Answer: Be helpful, accurate, and concise. If you don't know the answer based on the provided context, say so."""
-        
+        departments_text = ""
+        if context.get("departments"):
+            departments_text = "\n".join([
+                f"  - {d['name']} | {d.get('email', '')} | {d.get('phone', '')}"
+                for d in context["departments"]
+            ])
+
+        courses_text = ""
+        if context.get("courses"):
+            courses_text = "\n".join([
+                f"  - {c['code']} {c['name']} ({c.get('credits', '')} kredi)"
+                for c in context["courses"]
+            ])
+
+        general_text = ""
+        if context.get("general_info"):
+            g = context["general_info"]
+            general_text = f"""  Üniversite: {g.get('title', '')}
+  Açıklama: {g.get('description', '')[:200]}
+  Misyon: {g.get('mission', '')[:150]}
+  Vizyon: {g.get('vision', '')[:150]}
+  Telefon: {g.get('phone', '')}
+  E-posta: {g.get('email', '')}"""
+
+        prompt = f"""Sen Acıbadem Üniversitesi'nin yapay zeka destekli asistanısın.
+
+KURALLAR:
+- Kullanıcının dilini (Türkçe veya İngilizce) otomatik algıla ve aynı dilde cevap ver.
+- YALNIZCA aşağıda verilen verileri kullan. Bilmediğin şeyi uydurma.
+- Spesifik sorulara spesifik cevap ver. Genel bilgi verme.
+- Kısa ve net ol.
+
+=======================
+SEMANTİK ARAMA SONUÇLARI (en alakalı):
+{semantic_text}
+
+PROGRAMLAR:
+{programs_text or "  (Veri yok)"}
+
+BÖLÜMLER:
+{departments_text or "  (Veri yok)"}
+
+DERSLER:
+{courses_text or "  (Veri yok)"}
+
+ÜNİVERSİTE GENEL BİLGİ:
+{general_text or "  (Veri yok)"}
+=======================
+
+SORU: {question}
+
+CEVAP:"""
+
         return prompt
-    
+
     def _fallback_answer(self, question: str, context: dict) -> dict:
-        """Fallback answer when LLM is unavailable"""
-        
-        if context.get('programs'):
+        """Ollama erişilemezse veriden doğrudan cevap üretir."""
+
+        parts = []
+
+        # Semantic sonuçlardan cevap üret
+        if context.get("semantic"):
+            sem_parts = []
+            for s in context["semantic"]:
+                if s["type"] == "program":
+                    sem_parts.append(f"{s['name']}" + (f" ({s.get('level', '')})" if s.get("level") else ""))
+                elif s["type"] == "course":
+                    sem_parts.append(f"{s['name']} ({s.get('code', '')})")
+                elif s["type"] == "department":
+                    sem_parts.append(s["name"])
+            if sem_parts:
+                parts.append("İlgili sonuçlar: " + ", ".join(sem_parts))
+
+        if context.get("programs"):
+            parts.append("Programlar: " + ", ".join([p["name"] for p in context["programs"][:5]]))
+
+        if context.get("departments"):
+            parts.append("Bölümler: " + ", ".join([d["name"] for d in context["departments"][:5]]))
+
+        if context.get("courses"):
+            parts.append("Dersler: " + ", ".join([c["name"] for c in context["courses"][:5]]))
+
+        if context.get("general_info"):
+            info = context["general_info"]
+            parts.append(f"{info.get('title', '')} — {info.get('description', '')[:200]}")
+
+        if parts:
             return {
-                'text': f"I found {len(context['programs'])} relevant programs. "
-                        f"The programs available are: {', '.join([p['name'] for p in context['programs'][:3]])}",
-                'sources': context.get('sources', []),
-                'confidence': 0.5
+                "text": "\n".join(parts),
+                "sources": context.get("sources", []),
+                "confidence": 0.5
             }
-        elif context.get('general_info'):
-            return {
-                'text': f"Acibadem University is located in Istanbul, Turkey. "
-                        f"For more information, please contact: {context['general_info'].get('phone', 'N/A')}",
-                'sources': context.get('sources', []),
-                'confidence': 0.5
-            }
-        else:
-            return {
-                'text': "I don't have enough information to answer this question. "
-                        "Please try asking about programs, departments, or courses.",
-                'sources': [],
-                'confidence': 0.0
-            }
+
+        return {
+            "text": "Yeterli bilgi bulunamadı.",
+            "sources": [],
+            "confidence": 0.0
+        }

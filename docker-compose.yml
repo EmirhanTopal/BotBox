@@ -47,10 +47,8 @@ services:
     container_name: botbox_ollama
     ports:
       - "11434:11434"
-    environment:
-      OLLAMA_MODELS: /root/.ollama/models
     volumes:
-      - ollama_data:/root/.ollama/models
+      - ollama_data:/root/.ollama   # ✅ TAM KLASÖR
 
 volumes:
   postgres_data:
