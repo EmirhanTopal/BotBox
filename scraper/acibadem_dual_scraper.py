@@ -1,3 +1,16 @@
+"""
+Acıbadem University Dual Scraper
+Kaynaklar:
+  - acibadem.edu.tr  (statik: genel bilgi, fakülteler, programlar, iletişim)
+  - obs.acibadem.edu.tr/oibs/bologna (dinamik: programlar, dersler, müfredat)
+
+Yenilikler:
+  - Her ders artık program_name, program_level, semester alanlarına sahip
+  - Yarıyıl başlıkları atlanmıyor; ders hangi yarıyılda ise o bilgi kaydediliyor
+  - Program → Ders ilişkisi kuruldu (bir ders birden fazla programda olabilir)
+  - Müfredat (curriculum) ayrıca kaydediliyor: {program, semester, courses[]}
+"""
+
 import json
 import logging
 import re
@@ -5,14 +18,14 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional, Set
 from urllib.parse import urljoin, urlparse, parse_qs
-from asgiref.sync import sync_to_async
+
 import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, Browser, Page
 
 logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
 
 class AcibademDualScraper:
     URLS = {
@@ -26,29 +39,15 @@ class AcibademDualScraper:
     }
 
     OBS_UNIT_URLS = [
-        "https://obs.acibadem.edu.tr/oibs/bologna/unitSelection.aspx?type=lis&lang=tr",
-        "https://obs.acibadem.edu.tr/oibs/bologna/unitSelection.aspx?type=myo&lang=tr",
-        "https://obs.acibadem.edu.tr/oibs/bologna/unitSelection.aspx?type=yls&lang=tr",
-        "https://obs.acibadem.edu.tr/oibs/bologna/unitSelection.aspx?type=dok&lang=tr",
-    ]
-
-    KNOWN_FACULTIES = [
-        "School of Medicine",
-        "Faculty of Pharmacy",
-        "Faculty of Health Sciences",
-        "Faculty of Arts and Sciences",
-        "Faculty of Engineering and Natural Sciences",
+        ("lis", "Bachelor",   "https://obs.acibadem.edu.tr/oibs/bologna/unitSelection.aspx?type=lis&lang=tr"),
+        ("myo", "Associate",  "https://obs.acibadem.edu.tr/oibs/bologna/unitSelection.aspx?type=myo&lang=tr"),
+        ("yls", "Master",     "https://obs.acibadem.edu.tr/oibs/bologna/unitSelection.aspx?type=yls&lang=tr"),
+        ("dok", "PhD",        "https://obs.acibadem.edu.tr/oibs/bologna/unitSelection.aspx?type=dok&lang=tr"),
     ]
 
     def __init__(self, use_headless: bool = True):
-        self.static_url = self.URLS["home"]
-        self.dynamic_url = self.URLS["obs"]
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
+        self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         self.use_headless = use_headless
-        
-        # Playwright nesneleri
         self._playwright = None
         self._browser: Optional[Browser] = None
         self._page: Optional[Page] = None
@@ -64,15 +63,15 @@ class AcibademDualScraper:
                 "pages": [],
             },
             "dynamic_content": {
-                "programs": [],
-                "courses": [],
-                "curriculum": [],
+                "programs": [],       # OBS'den çekilen program listesi
+                "courses": [],        # Tüm dersler (program+semester bilgisiyle)
+                "curriculum": [],     # Program → yarıyıl → dersler ağacı
                 "requirements": [],
             },
             "merged_data": {
                 "all_programs": [],
-                "all_courses": [],
                 "all_departments": [],
+                "complete_info": [],
             },
             "metadata": {
                 "scrape_date": "",
@@ -87,27 +86,21 @@ class AcibademDualScraper:
     # =========================================================
 
     def init_playwright_driver(self) -> bool:
-        """Initialize Playwright browser."""
         try:
             self._playwright = sync_playwright().start()
             self._browser = self._playwright.chromium.launch(
                 headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-gpu",
-                ],
+                args=["--no-sandbox", "--disable-setuid-sandbox",
+                      "--disable-dev-shm-usage", "--disable-gpu"],
             )
             self._page = self._browser.new_page(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             )
-            # Playwright'ın kendi timeout'u
-            self._page.set_default_timeout(30_000)  # ms
-            logger.info("Playwright browser initialized successfully")
+            self._page.set_default_timeout(30_000)
+            logger.info("Playwright initialized")
             return True
         except Exception as e:
-            logger.error(f"Failed to initialize Playwright: {e}")
+            logger.error(f"Playwright init failed: {e}")
             return False
 
     def close_playwright_driver(self) -> None:
@@ -115,40 +108,40 @@ class AcibademDualScraper:
             self._browser.close()
         if self._playwright:
             self._playwright.stop()
-        logger.info("Playwright browser closed")
+        logger.info("Playwright closed")
 
-    def _get_page_source(self, url: str, wait_seconds: int = 4) -> Optional[BeautifulSoup]:
-        """Playwright ile sayfaya git, HTML'i al, BeautifulSoup döndür."""
+    def _get_page_source(self, url: str, wait_seconds: int = 3) -> Optional[BeautifulSoup]:
         if not self._page:
             return None
         try:
             self._page.goto(url, wait_until="networkidle")
-            # networkidle çoğu zaman yeterli, ama JS-heavy sayfalarda biraz daha bekle
             if wait_seconds > 0:
                 self._page.wait_for_timeout(wait_seconds * 1000)
             return BeautifulSoup(self._page.content(), "html.parser")
         except Exception as e:
-            logger.error(f"Playwright failed to load {url}: {e}")
+            logger.error(f"Playwright failed {url}: {e}")
             return None
 
     # =========================================================
-    # STATIC (değişmedi)
+    # STATIC SCRAPING
     # =========================================================
 
     def fetch_page(self, url: str) -> Optional[BeautifulSoup]:
         try:
-            response = requests.get(url, headers=self.headers, timeout=15)
-            response.raise_for_status()
-            return BeautifulSoup(response.content, "html.parser")
+            r = requests.get(url, headers=self.headers, timeout=15)
+            r.raise_for_status()
+            return BeautifulSoup(r.content, "html.parser")
         except Exception as e:
-            logger.error(f"Error fetching {url}: {e}")
+            logger.error(f"fetch_page failed {url}: {e}")
             return None
+
+    def _clean_text(self, text: str) -> str:
+        return re.sub(r'\s+', ' ', text).strip()
 
     def scrape_static_homepage(self) -> Dict:
         soup = self.fetch_page(self.URLS["home"])
         if not soup:
             return {}
-
         data = {
             "title": soup.title.string.strip() if soup.title else "",
             "meta_description": "",
@@ -158,343 +151,120 @@ class AcibademDualScraper:
             "founded_year": "2007",
             "campuses": ["Kerem Aydınlar Campus (Ataşehir, Istanbul)"],
         }
-
         meta = soup.find("meta", {"name": "description"})
         if meta:
             data["meta_description"] = meta.get("content", "")
-
         for tag in soup.find_all(["p", "div", "section"]):
             text = tag.get_text(separator=" ", strip=True)
             if "mission" in text.lower() and not data["mission"]:
                 data["mission"] = text[:500]
             if "vision" in text.lower() and not data["vision"]:
                 data["vision"] = text[:500]
-
-        hero = soup.find(
-            ["section", "div"],
-            {"class": lambda c: c and any(x in " ".join(c) for x in ["hero", "banner", "slider", "intro"])},
-        )
-        if hero:
-            data["hero_text"] = hero.get_text(separator=" ", strip=True)[:1000]
-
         return data
 
     def scrape_static_departments(self) -> List[Dict]:
         soup = self.fetch_page(self.URLS["academic_structure"])
         departments = []
-
         if soup:
-            content_area = (
-                soup.find("main")
-                or soup.find("div", {"class": lambda c: c and "content" in " ".join(c)})
-                or soup
-            )
-            headings = content_area.find_all(["h1", "h2", "h3", "h4"])
-
-            for h in headings:
-                text = h.get_text(strip=True)
-                if len(text) > 5:
-                    desc_elem = h.find_next_sibling(["p", "ul", "div"])
-                    desc = desc_elem.get_text(strip=True)[:300] if desc_elem else ""
-                    link_elem = h.find("a") or h.find_next("a")
-                    link = (
-                        urljoin(self.URLS["home"], link_elem["href"])
-                        if link_elem and link_elem.get("href")
-                        else ""
-                    )
+            content = soup.find("main") or soup.find("div", {"class": "content"}) or soup
+            for heading in content.find_all(["h2", "h3", "h4"]):
+                text = self._clean_text(heading.get_text())
+                if len(text) > 3:
+                    description_parts = []
+                    for sib in heading.find_next_siblings():
+                        if sib.name in ["h2", "h3", "h4"]:
+                            break
+                        description_parts.append(self._clean_text(sib.get_text(" ", strip=True)))
                     departments.append({
-                        "name": text, "description": desc, "link": link,
-                        "email": "", "phone": "", "source": "acibadem.edu.tr",
+                        "name": text,
+                        "description": " ".join(description_parts)[:500],
+                        "email": "",
+                        "phone": "",
+                        "link": self.URLS["academic_structure"],
+                        "source": "acibadem.edu.tr",
                     })
-
-        if not departments:
-            logger.warning("academic-structure page empty, using fallback list")
-            for fac in self.KNOWN_FACULTIES:
-                departments.append({
-                    "name": fac, "description": "", "link": "",
-                    "email": "", "phone": "", "source": "acibadem.edu.tr",
-                })
-
+        logger.info(f"Static departments: {len(departments)}")
         return departments
 
     def scrape_static_programs(self) -> List[Dict]:
         soup = self.fetch_page(self.URLS["undergrad_programs"])
         programs = []
-
         if soup:
-            for elem in soup.find_all(["li", "div", "article"]):
-                text = elem.get_text(strip=True)
-                if not (10 < len(text) < 200):
-                    continue
-                link_elem = elem.find("a")
-                link = (
-                    urljoin(self.URLS["home"], link_elem["href"])
-                    if link_elem and link_elem.get("href")
-                    else ""
-                )
-                keywords = ["medicine", "pharmacy", "nursing", "engineering", "psychology",
-                            "nutrition", "physiotherapy", "management", "biology", "genetics"]
-                if any(kw in text.lower() for kw in keywords):
+            for a in soup.find_all("a", href=True):
+                text = self._clean_text(a.get_text())
+                href = a["href"]
+                if text and len(text) > 5 and ("program" in href.lower() or "faculty" in href.lower()):
+                    full_url = urljoin(self.URLS["home"], href)
                     programs.append({
-                        "name": text[:150], "level": "Undergraduate", "duration": "",
-                        "department": "", "language": "", "tuition": "",
-                        "link": link, "source": "acibadem.edu.tr/undergrad-programs",
+                        "name": text,
+                        "level": "Undergraduate",
+                        "duration": "",
+                        "department": "",
+                        "language": "English" if "İngilizce" in text or "English" in text else "",
+                        "link": full_url,
+                        "source": "acibadem.edu.tr/undergrad-programs",
                     })
-
-        logger.info(f"Static programs found: {len(programs)}")
+        logger.info(f"Static programs: {len(programs)}")
         return programs
 
     def scrape_static_contact(self) -> Dict:
         soup = self.fetch_page(self.URLS["contact"])
-        contact_data = {
-            "main_phone": "+90 216 500 44 44",
-            "main_email": "ik@acibadem.edu.tr",
+        contact = {
+            "main_phone": "021-2022",
+            "main_email": "tanitim@acibadem.edu.tr",
             "addresses": ["Kayışdağı Cd. No:32, Ataşehir, İstanbul"],
             "social_media": {},
             "departments_contact": [],
             "source": "acibadem.edu.tr",
         }
-
-        if not soup:
-            return contact_data
-
-        phones = re.findall(r"(?:\+90|0)\s?[\d\s\-]{10,15}", soup.get_text())
-        if phones:
-            contact_data["main_phone"] = phones[0].strip()
-
-        emails = re.findall(r"[\w\.\-]+@acibadem\.edu\.tr", soup.get_text())
-        if emails:
-            contact_data["main_email"] = emails[0]
-
-        for row in soup.find_all(["tr", "li", "div", "p"]):
-            text = row.get_text(separator=" ", strip=True)
-            if "@acibadem.edu.tr" in text or "0216 500" in text:
-                contact_data["departments_contact"].append(text[:200])
-
-        return contact_data
-    
-
-    def scrape_dynamic_obs_courses(self) -> List[Dict]:
-        courses = []
-        seen: Set[str] = set()
-
-        if not self.all_data["dynamic_content"]["programs"]:
-            self.all_data["dynamic_content"]["programs"] = self.scrape_dynamic_obs_programs()
-
-        for prog in self.all_data["dynamic_content"]["programs"]:
-            sunit = parse_qs(urlparse(prog['detail_url']).query).get('curSunit', [None])[0]
-            if not sunit:
-                continue
-
-            courses_url = f"https://obs.acibadem.edu.tr/oibs/bologna/progCourses.aspx?lang=tr&curSunit={sunit}"
-            
-            # 1. PostBack ile ID'leri topla
-            course_ids = self._collect_course_ids_from_courses_page(courses_url)
-            
-            # 2. Her ID için detay sayfasını fetch et
-            for item in course_ids:
-                key = item['kod'].lower()
-                if key in seen:
-                    continue
-                seen.add(key)
-
-                details = self._extract_course_details(item['detail_url'])
-                if details:
-                    details['program'] = prog.get('name', '')
-                    details['program_level'] = prog.get('level', '')
-                    courses.append(details)
-
-        logger.info(f"Extracted {len(courses)} courses with details")
-        return courses
+        if soup:
+            # Telefon
+            phone_pattern = re.compile(r'(\+90[\s\-]?\d{3}[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}|\d{3,4}[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2})')
+            for tag in soup.find_all(string=phone_pattern):
+                m = phone_pattern.search(tag)
+                if m:
+                    contact["main_phone"] = m.group(0)
+                    break
+            # Email
+            email_pattern = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
+            for tag in soup.find_all(string=email_pattern):
+                m = email_pattern.search(tag)
+                if m and "acibadem.edu.tr" in m.group(0):
+                    contact["main_email"] = m.group(0)
+                    break
+        return contact
 
     # =========================================================
-    # DYNAMIC HELPERS
+    # OBS DYNAMIC SCRAPING — PROGRAMLAR
     # =========================================================
 
-    def _clean_text(self, text: str) -> str:
-        return re.sub(r"\s+", " ", (text or "")).strip()
+    def _looks_like_program_name(self, text: str) -> bool:
+        if len(text) < 4 or len(text) > 200:
+            return False
+        skip = ["ana sayfa", "home", "geri", "back", "menu", "login", "search",
+                "türkçe", "english", "bologna", "ects"]
+        if any(s in text.lower() for s in skip):
+            return False
+        return True
+
+    def _is_department_heading(self, text: str) -> bool:
+        keywords = ["fakülte", "enstitü", "yüksekokul", "meslek", "faculty",
+                    "institute", "school", "college", "department"]
+        return any(k in text.lower() for k in keywords) and len(text) < 100
 
     def _abs_obs_url(self, href: str) -> str:
         if href.startswith("http"):
             return href
-        return "https://obs.acibadem.edu.tr/oibs/bologna/" + href.lstrip("/")
+        return urljoin(self.URLS["obs_base"], href)
 
-    def _save_progress(self, filename: Optional[str]) -> None:
-        if filename:
-            self.save_to_json(filename)
+    def _level_from_type(self, type_code: str) -> str:
+        return {"lis": "Bachelor", "myo": "Associate", "yls": "Master", "dok": "PhD"}.get(type_code, "")
 
-    def _level_from_url(self, url: str) -> str:
-        if "type=lis" in url: return "Bachelor"
-        if "type=myo" in url: return "Associate"
-        if "type=yls" in url: return "Master"
-        if "type=dok" in url: return "PhD"
-        return ""
-
-    def _is_department_heading(self, text: str) -> bool:
-        keywords = ["Fakültesi", "Enstitüsü", "Meslek Yüksekokulu",
-                    "Yüksekokulu", "Faculty", "Institute", "School"]
-        return any(k in text for k in keywords)
-
-    def _looks_like_program_name(self, text: str) -> bool:
-        text = self._clean_text(text)
-        if len(text) < 3 or len(text) > 180:
-            return False
-        blacklist = ["Bilgi Paketi", "EN", "https://", "http://", "Ana Sayfa", "Bologna Süreci"]
-        if any(x in text for x in blacklist):
-            return False
-        return True
-    
-    def _collect_course_ids_from_courses_page(self, courses_url: str) -> List[Dict]:
-        """progCourses sayfasındaki her ders için curCourse ID'sini PostBack ile yakala."""
-        if not self._page:
-            return []
-
-        result = []
-        caught_urls = []
-
-        def on_request(req):
-            if 'progCourseDetails' in req.url:
-                caught_urls.append(req.url)
-
-        self._page.on('request', on_request)
-
-        try:
-            self._page.goto(courses_url, wait_until='networkidle')
-            self._page.wait_for_timeout(3000)
-            soup = BeautifulSoup(self._page.content(), 'html.parser')
-
-            # Her btnDersAyrinti linkini topla
-            items = []
-            for a in soup.find_all('a', id=re.compile(r'btnDersAyrinti')):
-                tr = a.find_parent('tr')
-                kod_a = tr.find('a', id=re.compile(r'btnDersKod')) if tr else None
-                kod = kod_a.get_text(strip=True) if kod_a else ''
-                postback = re.search(r"__doPostBack\('([^']+)'", a.get('href', ''))
-                if postback:
-                    items.append({'kod': kod, 'postback': postback.group(1)})
-
-            logger.info(f"[course_ids] {courses_url} → {len(items)} ders bulundu")
-
-            for item in items:
-                caught_urls.clear()
-                try:
-                    pb = item['postback'].replace('$', r'\$')
-                    self._page.evaluate(f"__doPostBack('{pb}', '')")
-                    self._page.wait_for_timeout(1500)
-                    self._page.go_back(wait_until='networkidle')
-                    self._page.wait_for_timeout(1500)
-
-                    if caught_urls:
-                        m = re.search(r'curCourse=(\d+)', caught_urls[0])
-                        if m:
-                            result.append({
-                                'kod': item['kod'],
-                                'curCourse': m.group(1),
-                                'detail_url': f"https://obs.acibadem.edu.tr/oibs/bologna/progCourseDetails.aspx?curCourse={m.group(1)}&lang=tr"
-                            })
-                except Exception as e:
-                    logger.warning(f"PostBack hatası {item['kod']}: {e}")
-                    continue
-
-        except Exception as e:
-            logger.error(f"ID toplama hatası {courses_url}: {e}")
-
-        self._page.remove_listener('request', on_request)
-        logger.info(f"[course_ids] {len(result)} ID toplandı")
-        return result
-
-
-    def _extract_course_details(self, detail_url: str) -> Dict:
-        """progCourseDetails sayfasından tüm bilgileri çek."""
-        soup = self._get_page_source(detail_url, wait_seconds=2)
-        if not soup:
-            return {}
-
-        details = {}
-
-        # Table 3: key-value çiftleri (Dersin Dili, Türü, Amacı, İçeriği...)
-        KEY_MAP = {
-            'Dersin Dili': 'dil',
-            'Dersin Düzeyi': 'duzey',
-            'Bölümü / Programı': 'program',
-            'Öğrenim Türü': 'ogretim_turu',
-            'Dersin Türü': 'ders_turu',
-            'Dersin Öğretim Şekli': 'ogretim_sekli',
-            'Dersin Amacı': 'amac',
-            'Dersin İçeriği': 'icerik',
-            'Dersin Yöntem ve Teknikleri': 'yontem',
-            'Ön Koşulları': 'on_kosul',
-            'Dersin Koordinatörü': 'koordinator',
-            'Dersi Verenler': 'ogretmenler',
-            'Dersin Yardımcıları': 'yardimcilar',
-            'Dersin Staj Durumu': 'staj',
-            'Kaynaklar': 'kaynaklar',
-            'Ders Notları': 'ders_notlari',
-            'Dökümanlar': 'dokumanlar',
-            'Ödevler': 'odevler',
-            'Sınavlar': 'sinavlar',
-        }
-
-        for table in soup.find_all('table'):
-            rows = table.find_all('tr')
-            for row in rows:
-                cols = [self._clean_text(td.get_text(' ', strip=True))
-                        for td in row.find_all(['td', 'th'])]
-                cols = [c for c in cols if c]
-                if len(cols) == 2 and cols[0] in KEY_MAP:
-                    details[KEY_MAP[cols[0]]] = cols[1]
-
-        # Table 1: temel bilgiler (Yarıyıl, Kod, Adı, AKTS...)
-        tables = soup.find_all('table')
-        if len(tables) > 1:
-            rows = tables[1].find_all('tr')
-            if len(rows) > 1:
-                cols = [self._clean_text(td.get_text(' ', strip=True))
-                        for td in rows[1].find_all(['td', 'th'])]
-                if len(cols) >= 6:
-                    details['yaryil'] = cols[0]
-                    details['kod'] = cols[1]
-                    details['ad'] = cols[2]
-                    details['tul'] = cols[3]
-                    details['kredi'] = cols[4]
-                    details['akts'] = cols[5]
-
-        # Table 6: yarıyıl çalışmaları (vize/final katkı)
-        if len(tables) > 6:
-            sinav_rows = tables[6].find_all('tr')[1:]  # başlığı atla
-            sinavlar = []
-            for row in sinav_rows:
-                cols = [self._clean_text(td.get_text(' ', strip=True))
-                        for td in row.find_all(['td', 'th'])]
-                cols = [c for c in cols if c]
-                if len(cols) >= 3 and 'Toplam' not in cols[0]:
-                    sinavlar.append({'tur': cols[0], 'sayi': cols[1], 'katki': cols[2]})
-            if sinavlar:
-                details['sinav_katki'] = sinavlar
-
-        # Table 9: haftalık plan
-        if len(tables) > 9:
-            hafta_rows = tables[9].find_all('tr')[1:]  # başlığı atla
-            haftalik = []
-            for row in hafta_rows:
-                cols = [self._clean_text(td.get_text(' ', strip=True))
-                        for td in row.find_all(['td', 'th'])]
-                cols = [c for c in cols if c]
-                if len(cols) >= 2:
-                    haftalik.append({'hafta': cols[0], 'konu': cols[1]})
-            if haftalik:
-                details['haftalik_plan'] = haftalik
-
-        details['detail_url'] = detail_url
-        return details
-
-
-    def _extract_program_links_from_unit_page(self, url: str) -> List[Dict]:
+    def _extract_program_links_from_unit_page(self, type_code: str, level: str, url: str) -> List[Dict]:
         results = []
         seen: Set[str] = set()
         current_department = ""
 
-        # ✅ Selenium driver.get() → Playwright _get_page_source()
         soup = self._get_page_source(url, wait_seconds=4)
         if not soup:
             return []
@@ -502,7 +272,6 @@ class AcibademDualScraper:
         for a in soup.find_all("a", href=True):
             text = self._clean_text(a.get_text(" ", strip=True))
             href = a.get("href", "")
-
             if not text:
                 continue
             if self._is_department_heading(text):
@@ -510,56 +279,94 @@ class AcibademDualScraper:
                 continue
             if "curOp=showPac" in href and self._looks_like_program_name(text):
                 abs_href = self._abs_obs_url(href)
-                key = f"{text.lower()}|{abs_href}"
+                key = text.lower().strip()
                 if key in seen:
                     continue
                 seen.add(key)
+                # Dil tespiti
+                language = "İngilizce" if ("İngilizce" in text or "(English)" in text) else "Türkçe"
                 results.append({
                     "name": text,
-                    "level": self._level_from_url(url),
-                    "duration": "",
+                    "level": level,
+                    "type_code": type_code,
+                    "duration": "4 yıl" if level == "Bachelor" else
+                                "2 yıl" if level == "Associate" else
+                                "2 yıl" if level == "Master" else
+                                "4 yıl" if level == "PhD" else "",
                     "department": current_department,
-                    "language": "English" if "İngilizce" in text or "English" in text else "",
+                    "language": language,
                     "tuition": "",
                     "link": abs_href,
                     "detail_url": abs_href,
                     "source": "obs.acibadem.edu.tr",
                 })
 
+        logger.info(f"  {level} ({type_code}): {len(results)} program")
         return results
 
-    from urllib.parse import urlparse, parse_qs
+    def scrape_dynamic_obs_programs(self) -> List[Dict]:
+        programs = []
+        seen: Set[str] = set()
+        for type_code, level, url in self.OBS_UNIT_URLS:
+            logger.info(f"Scraping OBS programs: {level} — {url}")
+            for prog in self._extract_program_links_from_unit_page(type_code, level, url):
+                key = prog["name"].lower().strip()
+                if key and key not in seen:
+                    seen.add(key)
+                    programs.append(prog)
+        logger.info(f"Total OBS programs: {len(programs)}")
+        return programs
+
+    # =========================================================
+    # OBS DYNAMIC SCRAPING — DERSLER + MÜFREDAT
+    # =========================================================
 
     def _courses_url_from_detail(self, detail_url: str) -> str:
-        """detail_url'den progCourses.aspx URL'i oluştur."""
         params = parse_qs(urlparse(detail_url).query)
-        sunit = params.get('curSunit', [None])[0]
-        lang = params.get('lang', ['tr'])[0]
+        sunit = params.get("curSunit", [None])[0]
+        lang = params.get("lang", ["tr"])[0]
         if sunit:
             return f"https://obs.acibadem.edu.tr/oibs/bologna/progCourses.aspx?lang={lang}&curSunit={sunit}"
         return ""
 
-    def _extract_courses_from_program_detail(self, detail_url: str) -> List[Dict]:
-        if not detail_url:
-            return []
+    def _extract_curriculum_from_program(self, program: Dict) -> Dict:
+        """
+        Bir programın müfredatını çeker.
+        Döner:
+          {
+            program_name: str,
+            program_level: str,
+            semesters: [
+              { semester: int, courses: [ {code, name, credits, type, tul} ] }
+            ]
+          }
+        """
+        detail_url = program.get("detail_url", "")
+        program_name = program.get("name", "")
+        program_level = program.get("level", "")
+
+        result = {
+            "program_name": program_name,
+            "program_level": program_level,
+            "program_department": program.get("department", ""),
+            "program_language": program.get("language", ""),
+            "semesters": [],
+        }
 
         courses_url = self._courses_url_from_detail(detail_url)
         if not courses_url:
             logger.warning(f"curSunit parse edilemedi: {detail_url}")
-            return []
-
-        courses = []
-        seen: Set[str] = set()
+            return result
 
         try:
             soup = self._get_page_source(courses_url, wait_seconds=3)
             if not soup:
-                return []
+                return result
 
             tables = soup.find_all("table")
-            logger.debug(f"[courses] {courses_url} → {len(tables)} table")
+            current_semester = None
+            semester_dict: Dict[int, List[Dict]] = {}
 
-            # Table 2 (index 1) ders tablosu, ama hepsini tara
             for table in tables:
                 rows = table.find_all("tr")
                 for row in rows:
@@ -567,103 +374,117 @@ class AcibademDualScraper:
                             for td in row.find_all(["td", "th"])]
                     cols = [c for c in cols if c]
 
-                    # Başlık satırlarını atla
-                    if not cols or cols[0] in ("Ders Kodu", "Course Code", ""):
-                        continue
-                    # "X.Yarıyıl" gibi bölüm başlıklarını atla
-                    if len(cols) == 1 or "Yarıyıl" in cols[0] or "Semester" in cols[0]:
+                    if not cols:
                         continue
 
-                    # Sütun yapısı: Ders Kodu | Ders Adı | T+U+L | Zorunlu/Seçmeli | AKTS | ...
-                    if len(cols) >= 2:
+                    # Başlık satırı atla
+                    if cols[0] in ("Ders Kodu", "Course Code"):
+                        continue
+
+                    # Yarıyıl başlığı — "1.Yarıyıl", "2. Semester" vb.
+                    if len(cols) == 1 and ("yarıyıl" in cols[0].lower() or
+                                           "semester" in cols[0].lower() or
+                                           "dönem" in cols[0].lower()):
+                        m = re.search(r'(\d+)', cols[0])
+                        current_semester = int(m.group(1)) if m else None
+                        continue
+
+                    # Toplam satırı atla
+                    if "toplam" in cols[0].lower() or "total" in cols[0].lower():
+                        continue
+
+                    # Ders satırı — geçerli ders kodu formatı
+                    if len(cols) >= 2 and re.search(r"[A-ZÇĞİÖŞÜ]{2,}\s*\d{2,3}", cols[0]):
                         code = cols[0]
                         name = cols[1]
-
-                        # Geçerli ders kodu formatı: "MBG 109", "ATA 101" vb.
-                        if not re.search(r"[A-ZÇĞİÖŞÜ]{2,}\s*\d{2,3}", code):
-                            continue
-
+                        tul = cols[2] if len(cols) > 2 else ""
+                        course_type = cols[3] if len(cols) > 3 else ""
                         credits = cols[4] if len(cols) > 4 else ""
-                        course_type = cols[3] if len(cols) > 3 else ""  # Zorunlu/Seçmeli
-                        tul = cols[2] if len(cols) > 2 else ""          # T+U+L
 
-                        key = f"{code}|{name}"
-                        if key not in seen:
-                            seen.add(key)
-                            courses.append({
-                                "code": code,
-                                "name": name,
-                                "credits": credits,
-                                "type": course_type,
-                                "tul": tul,
-                                "source": "obs.acibadem.edu.tr",
-                            })
+                        course_entry = {
+                            "code": code,
+                            "name": name,
+                            "credits": credits,
+                            "type": course_type,
+                            "tul": tul,
+                        }
 
-            logger.debug(f"[courses] {len(courses)} ders çekildi: {courses_url}")
-            return courses
+                        sem = current_semester or 0
+                        if sem not in semester_dict:
+                            semester_dict[sem] = []
+                        semester_dict[sem].append(course_entry)
+
+            # semester_dict'i sıralı listeye çevir
+            for sem_num in sorted(semester_dict.keys()):
+                result["semesters"].append({
+                    "semester": sem_num,
+                    "courses": semester_dict[sem_num],
+                })
+
+            total_courses = sum(len(s["courses"]) for s in result["semesters"])
+            logger.info(f"  [{program_name}] {len(result['semesters'])} yarıyıl, {total_courses} ders")
 
         except Exception as e:
-            logger.error(f"Error scraping courses from {courses_url}: {e}")
-            return []
-    # =========================================================
-    # DYNAMIC SCRAPING
-    # =========================================================
+            logger.error(f"Curriculum scrape error for {program_name}: {e}")
 
-    def scrape_dynamic_obs_programs(self) -> List[Dict]:
-        programs = []
-        seen: Set[str] = set()
+        return result
 
-        try:
-            for url in self.OBS_UNIT_URLS:
-                logger.info(f"Scraping OBS unit page: {url}")
-                for prog in self._extract_program_links_from_unit_page(url):
-                    key = prog.get("name", "").lower().strip()
-                    if key and key not in seen:
-                        seen.add(key)
-                        programs.append(prog)
+    def scrape_dynamic_obs_curriculum(self) -> tuple:
+        """
+        Tüm programların müfredatını çeker.
+        Döner: (curriculum_list, flat_courses_list)
+          - curriculum_list: [{program_name, semesters: [{semester, courses}]}]
+          - flat_courses_list: [{code, name, credits, type, tul, program_name, program_level, semester}]
+        """
+        curriculum_list = []
+        flat_courses: List[Dict] = []
+        seen_courses: Set[str] = set()
 
-            logger.info(f"Extracted {len(programs)} programs from OBS")
-            return programs
-        except Exception as e:
-            logger.error(f"Error scraping OBS programs: {e}")
-            return []
+        programs = self.all_data["dynamic_content"]["programs"]
+        logger.info(f"Scraping curriculum for {len(programs)} programs...")
 
-    def scrape_dynamic_obs_courses(self) -> List[Dict]:
-        courses = []
-        seen: Set[str] = set()
+        for i, program in enumerate(programs):
+            prog_name = program.get("name", "")
+            prog_level = program.get("level", "")
+            logger.info(f"  [{i+1}/{len(programs)}] {prog_name}")
 
-        try:
-            if not self.all_data["dynamic_content"]["programs"]:
-                self.all_data["dynamic_content"]["programs"] = self.scrape_dynamic_obs_programs()
+            curriculum = self._extract_curriculum_from_program(program)
+            curriculum_list.append(curriculum)
 
-            detail_urls = [
-                p.get("detail_url", "")
-                for p in self.all_data["dynamic_content"]["programs"]
-                if p.get("detail_url")
-            ]
+            # Düz ders listesine ekle (program+semester bilgisiyle)
+            for sem_data in curriculum.get("semesters", []):
+                sem_num = sem_data.get("semester")
+                for course in sem_data.get("courses", []):
+                    # Unique key: kod + program (aynı ders farklı programlarda olabilir)
+                    flat_key = f"{course['code']}|{prog_name}"
+                    if flat_key not in seen_courses:
+                        seen_courses.add(flat_key)
+                        flat_courses.append({
+                            "code": course["code"],
+                            "name": course["name"],
+                            "credits": course["credits"],
+                            "type": course["type"],
+                            "tul": course.get("tul", ""),
+                            "program_name": prog_name,
+                            "program_level": prog_level,
+                            "semester": sem_num,
+                            "source": "obs.acibadem.edu.tr",
+                        })
 
-            for detail_url in detail_urls[:30]:
-                for course in self._extract_courses_from_program_detail(detail_url):
-                    key = f"{course.get('code','').lower()}|{course.get('name','').lower()}"
-                    if key not in seen and course.get("name"):
-                        seen.add(key)
-                        courses.append(course)
-
-            logger.info(f"Extracted {len(courses)} courses from OBS")
-            return courses
-        except Exception as e:
-            logger.error(f"Error scraping OBS courses: {e}")
-            return []
+        logger.info(f"Total curriculum entries: {len(curriculum_list)}")
+        logger.info(f"Total flat courses: {len(flat_courses)}")
+        return curriculum_list, flat_courses
 
     # =========================================================
-    # MERGE + MAIN (değişmedi)
+    # MERGE
     # =========================================================
 
     def merge_and_deduplicate(self) -> Dict:
         merged = {"all_programs": [], "all_departments": [], "complete_info": []}
         seen_programs: Set[str] = set()
-        for prog in (self.all_data["static_content"]["programs"]
-                     + self.all_data["dynamic_content"]["programs"]):
+
+        for prog in (self.all_data["static_content"]["programs"] +
+                     self.all_data["dynamic_content"]["programs"]):
             key = prog.get("name", "").lower().strip()
             if key and key not in seen_programs:
                 seen_programs.add(key)
@@ -681,11 +502,24 @@ class AcibademDualScraper:
                     f"{len(merged['all_departments'])} departments")
         return merged
 
+    def _save_progress(self, filename: Optional[str] = None) -> None:
+        if filename:
+            try:
+                with open(filename, "w", encoding="utf-8") as f:
+                    json.dump(self.all_data, f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                logger.error(f"Progress save failed: {e}")
+
+    # =========================================================
+    # MAIN SCRAPE
+    # =========================================================
+
     def scrape_all(self, autosave_filename: Optional[str] = None) -> Dict:
         logger.info("=" * 60)
         logger.info("Starting comprehensive dual-source scrape...")
         logger.info("=" * 60)
 
+        # 1. STATIC
         logger.info("\n[1/4] Scraping static content...")
         self.all_data["static_content"]["general_info"] = self.scrape_static_homepage()
         self.all_data["static_content"]["departments"] = self.scrape_static_departments()
@@ -693,44 +527,46 @@ class AcibademDualScraper:
         self.all_data["static_content"]["contact_info"] = self.scrape_static_contact()
         self.all_data["metadata"]["static_success"] = bool(
             self.all_data["static_content"]["general_info"]
-            or self.all_data["static_content"]["departments"]
-            or self.all_data["static_content"]["programs"]
         )
         self._save_progress(autosave_filename)
-        logger.info("✓ Static content scraped")
+        logger.info("✓ Static content done")
 
+        # 2. PLAYWRIGHT
         logger.info("\n[2/4] Initializing Playwright...")
-        # ✅ init_selenium_driver → init_playwright_driver
-        if self.init_playwright_driver():
-            logger.info("[3/4] Scraping dynamic content (obs.acibadem.edu.tr)...")
+        if not self.init_playwright_driver():
+            logger.warning("⚠ Playwright failed, skipping dynamic content")
+        else:
+            # 3. DYNAMIC — PROGRAMLAR
+            logger.info("[3/4] Scraping OBS programs...")
             programs = self.scrape_dynamic_obs_programs()
             self.all_data["dynamic_content"]["programs"] = programs
             self._save_progress(autosave_filename)
 
-            courses = self.scrape_dynamic_obs_courses()
-            self.all_data["dynamic_content"]["courses"] = courses
-            self.all_data["metadata"]["dynamic_success"] = bool(programs or courses)
+            # 4. DYNAMIC — MÜF REDAT + DERSLER
+            logger.info("[4/4] Scraping OBS curriculum & courses...")
+            curriculum_list, flat_courses = self.scrape_dynamic_obs_curriculum()
+            self.all_data["dynamic_content"]["curriculum"] = curriculum_list
+            self.all_data["dynamic_content"]["courses"] = flat_courses
+            self.all_data["metadata"]["dynamic_success"] = bool(programs or flat_courses)
             self._save_progress(autosave_filename)
 
-            # ✅ close_selenium_driver → close_playwright_driver
             self.close_playwright_driver()
-            logger.info("✓ Dynamic content scraped")
-        else:
-            logger.warning("⚠ Playwright initialization failed, skipping dynamic content")
+            logger.info("✓ Dynamic content done")
 
-        logger.info("\n[4/4] Merging and deduplicating data...")
+        # MERGE
         self.merge_and_deduplicate()
         self._save_progress(autosave_filename)
 
+        # SUMMARY
         logger.info("\n" + "=" * 60)
         logger.info("SCRAPING SUMMARY")
         logger.info("=" * 60)
         logger.info(f"Static departments : {len(self.all_data['static_content']['departments'])}")
         logger.info(f"Static programs    : {len(self.all_data['static_content']['programs'])}")
         logger.info(f"Dynamic programs   : {len(self.all_data['dynamic_content']['programs'])}")
-        logger.info(f"Dynamic courses    : {len(self.all_data['dynamic_content']['courses'])}")
+        logger.info(f"Curriculum entries : {len(self.all_data['dynamic_content']['curriculum'])}")
+        logger.info(f"Flat courses       : {len(self.all_data['dynamic_content']['courses'])}")
         logger.info(f"Merged programs    : {len(self.all_data['merged_data']['all_programs'])}")
-        logger.info(f"Merged departments : {len(self.all_data['merged_data']['all_departments'])}")
         logger.info("=" * 60 + "\n")
 
         return self.all_data
@@ -740,8 +576,14 @@ class AcibademDualScraper:
         try:
             with open(filename, "w", encoding="utf-8") as f:
                 json.dump(self.all_data, f, indent=2, ensure_ascii=False)
-            logger.info(f"✓ data saved to {filename}")
+            logger.info(f"✓ Data saved to {filename}")
             return True
         except Exception as e:
-            logger.error(f"Error saving data: {e}")
+            logger.error(f"Save failed: {e}")
             return False
+
+
+if __name__ == "__main__":
+    scraper = AcibademDualScraper(use_headless=True)
+    data = scraper.scrape_all(autosave_filename="acibadem_complete_data.json")
+    scraper.save_to_json("acibadem_complete_data.json")
