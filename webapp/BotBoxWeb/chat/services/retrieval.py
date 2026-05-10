@@ -614,10 +614,21 @@ class RetrievalService:
 
         # PROGRAM LIST
         elif 'list' in intents and 'program' in intents:
-            all_programs = Program.objects.all().order_by('level', 'name')
+            q_lower = q.lower()
+            
+            if 'yüksek lisans' in q_lower or 'lisansüstü' in q_lower:
+                level_filter = Q(level__in=['Master', 'PhD'])
+            elif 'önlisans' in q_lower or 'ön lisans' in q_lower:
+                level_filter = Q(level='Associate')
+            elif 'lisans' in q_lower:
+                level_filter = Q(level__in=['Bachelor', 'Undergraduate'])
+            else:
+                level_filter = Q()
+
+            all_programs = Program.objects.filter(level_filter).order_by('level', 'name')
             context["programs"] = [
                 {"name": p.name, "level": p.level,
-                 "department": str(p.department), "description": p.description or ""}
+                "department": str(p.department), "description": p.description or ""}
                 for p in all_programs[:30]
             ]
             if context["programs"]:
