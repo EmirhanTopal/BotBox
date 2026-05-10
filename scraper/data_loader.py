@@ -152,11 +152,11 @@ class DataLoader:
             try:
                 Instructor.objects.update_or_create(
                     name=name,
-                    department=inst.get('department', ''),
+                    faculty=inst.get('faculty', ''),
                     defaults={
                         'title':       inst.get('title', ''),
                         'email':       inst.get('email', ''),
-                        'faculty':     inst.get('faculty', ''),
+                        'department':  inst.get('department', ''),  # department ekle
                         'expertise':   inst.get('expertise', ''),
                         'profile_url': inst.get('profile_url', ''),
                         'level':       inst.get('level', ''),

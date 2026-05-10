@@ -214,6 +214,15 @@ class RetrievalService:
             intents.add('research')
             intents.add('general')
 
+        instructor_keywords = [
+            'akademisyen', 'hoca', 'öğretim üyesi', 'öğretim elemanı',
+            'akademik kadro', 'prof', 'doçent', 'araştırma görevlisi',
+            'instructor', 'faculty member', 'academic staff', 'professor',
+            'kimler ders veriyor', 'kimler çalışıyor', 'bölüm hocaları',
+        ]
+        if self._contains_any(q, instructor_keywords):
+            intents.add('instructor')
+
         return intents
 
     def _get_faculty_program_map(self) -> list:
@@ -423,7 +432,7 @@ class RetrievalService:
         context = {
             "programs": [], "courses": [], "departments": [],
             "general_info": None, "sources": [], "semantic": [],
-            "intents": [], "semester_courses": None,
+            "intents": [], "semester_courses": None, "instructors": [],
         }
 
         intents = self._detect_intents(q)
@@ -686,6 +695,33 @@ class RetrievalService:
                         "website": getattr(uni, 'website', 'https://www.acibadem.edu.tr'),
                     }
                     context["sources"].append("University Information")
+
+
+        # AKADEMİSYENLER
+        if 'instructor' in intents:
+            from chat.models import Instructor
+    
+            # Önce sorgu metninde fakülte adı ara
+            q_original = question  # orijinal soruyu kullan
+            instructors = Instructor.objects.filter(
+                faculty__icontains=q_original.split()[0]  # ilk kelime yeterli değil
+            )
+            
+            # Daha iyi: sorgunun tüm kelimeleriyle dene
+            words = [w for w in question.split() if len(w) > 4]
+            faculty_filter = Q()
+            for word in words:
+                faculty_filter |= Q(faculty__icontains=word)
+            
+            instructors = Instructor.objects.filter(faculty_filter).order_by('name')[:20]
+            
+            if instructors.exists():
+                context["instructors"] = [
+                    {"name": i.name, "title": i.title, 
+                    "faculty": i.faculty, "level": i.level}
+                    for i in instructors
+                ]
+                context["sources"].append("Akademik Kadro")
 
         # FALLBACK
         if not context["sources"]:

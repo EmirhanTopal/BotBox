@@ -92,13 +92,13 @@ class Instructor(models.Model):
     expertise = models.TextField(blank=True)
     profile_url = models.URLField(blank=True)
     level = models.CharField(max_length=50, blank=True)  # Lisans/Önlisans/Lisansüstü
-    source = models.CharField(max_length=100, default='acibadem.edu.tr')
+    source = models.CharField(max_length=300, default='acibadem.edu.tr')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['faculty', 'department', 'name']
-        unique_together = [['name', 'department']]
+        unique_together = [['name', 'faculty']]
 
     def __str__(self):
         return f"{self.title} {self.name} — {self.department}"

@@ -63,6 +63,9 @@ TERMİNOLOJİ: Fakülte=ana birim | Enstitü=lisansüstü | MYO=ön lisans | Bö
         elif 'list' in intents and 'program' in intents:
             base += "\n\nFORMAT: Programları numaralı listele. Fakülte ve seviyeyi belirt."
 
+        if 'instructor' in intents:
+            base += "\n\nAKADEMİSYEN: AKADEMİSYENLER bölümündeki isimleri unvanlarıyla listele. Her satırda unvan ve isim yaz."
+
         if 'contact' in intents:
             base += "\n\nİLETİŞİM: Sadece verideki bilgileri ver. www.acibadem.edu.tr/iletisim'e yönlendir."
         if 'admission' in intents:
@@ -156,6 +159,18 @@ TERMİNOLOJİ: Fakülte=ana birim | Enstitü=lisansüstü | MYO=ön lisans | Bö
                 for p in context["programs"][:10]
             ])
 
+        # ── Akademisyenler ──
+        instructors_text = ""
+        if context.get("instructors"):
+            lines = []
+            for inst in context["instructors"][:20]:
+                line = f"- {inst.get('title', '')} {inst['name']}"
+                if inst.get('department') and inst.get('department') != inst.get('faculty'):
+                    line += f" | {inst['department']}"
+                line += f" | {inst.get('faculty', '')}"
+                lines.append(line)
+            instructors_text = "\n".join(lines)
+
         # ── Dersler (genel arama) ──
         courses_text = ""
         if context.get("courses"):
@@ -195,6 +210,9 @@ TERMİNOLOJİ: Fakülte=ana birim | Enstitü=lisansüstü | MYO=ön lisans | Bö
 
 [FAKÜLTELER]
 {departments_text or "(veri yok)"}
+
+[AKADEMİSYENLER]
+{instructors_text or "(veri yok)"}
 
 [PROGRAMLAR]
 {programs_text or "(veri yok)"}
@@ -248,6 +266,13 @@ Toplam: 31 AKTS
 1. Bilgisayar Mühendisliği (İngilizce) — Mühendislik Fakültesi — Lisans
 2. Hemşirelik — Sağlık Bilimleri Fakültesi — Lisans
 """
+
+        if 'instructor' in intents:
+            return """ÖRNEK CEVAP:
+        Mühendislik ve Doğa Bilimleri Fakültesi akademik kadrosu:
+        1. Prof. Dr. Ahmet Bulut | Mühendislik ve Doğa Bilimleri Fakültesi
+        2. Dr. Öğr. Üyesi Mehmet Serkan Apaydın | Mühendislik ve Doğa Bilimleri Fakültesi
+        """
         if 'contact' in intents:
             return "ÖRNEK CEVAP:\n📞 021-2022 | ✉️ tanitim@acibadem.edu.tr | 🌐 www.acibadem.edu.tr\n"
         if 'admission' in intents:
@@ -321,6 +346,14 @@ Toplam: 31 AKTS
                 lvl = f" ({p['level']})" if p.get("level") else ""
                 dept = f" — {p['department']}" if p.get("department") else ""
                 lines.append(f"• {p['name']}{lvl}{dept}")
+
+        elif context.get("instructors"):
+            lines.append("Akademik Kadro:")
+            for inst in context["instructors"][:20]:
+                title = inst.get('title', '')
+                name = inst.get('name', '')
+                faculty = inst.get('faculty', '')
+                lines.append(f"• {title} {name} | {faculty}")
 
         elif context.get("courses"):
             lines.append("Dersler:")
