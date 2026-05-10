@@ -268,7 +268,24 @@ class RetrievalService:
 
         if exact_matches:
             exact_matches.sort(reverse=True)
-            chosen = exact_matches[0][1]
+            
+            # Aynı uzunlukta birden fazla eşleşme varsa
+            # parantez içermeyen (Türkçe) versiyonu tercih et
+            top_length = exact_matches[0][0]
+            top_matches = [name for length, name in exact_matches if length == top_length]
+            
+            if len(top_matches) > 1:
+                # Kullanıcı "ingilizce" yazdıysa İngilizce versiyonu seç
+                if 'ingilizce' in q_lower or 'english' in q_lower:
+                    chosen = next((n for n in top_matches if 'İngilizce' in n), top_matches[0])
+                # "İ.Ö." yazdıysa ikinci öğretim seç
+                elif 'i.ö' in q_lower or 'ikinci öğretim' in q_lower or 'iö' in q_lower:
+                    chosen = next((n for n in top_matches if 'İ.Ö.' in n), top_matches[0])
+                else:
+                    # Varsayılan: parantez içermeyen Türkçe versiyon
+                    chosen = next((n for n in top_matches if '(' not in n), top_matches[0])
+            else:
+                chosen = top_matches[0]
             logger.info(f"Exact match: '{chosen}'")
             return chosen
 
@@ -309,7 +326,7 @@ class RetrievalService:
         unique = []
 
         # Ortak havuz prefix'leri — hiçbir zaman gösterme
-        COMMON_PREFIXES = {'ACU', 'ADS'}
+        COMMON_PREFIXES = {'ACU', 'ADS', 'SYS'}
 
         # Programa özgü prefix'leri tespit et
         allowed_prefixes = set()
@@ -338,8 +355,12 @@ class RetrievalService:
             if prefix in COMMON_PREFIXES:
                 continue
 
-            # Program belirtilmişse sadece o programa ait prefix'lere izin ver
-            if allowed_prefixes and prefix not in allowed_prefixes:
+            if c.type == 'Seçmeli':
+                clean_code = c.code.replace(' ', '')
+                if not re.search(r'\d{2,4}0[12]$', clean_code):
+                    continue
+
+            elif allowed_prefixes and prefix not in allowed_prefixes:
                 continue
 
             key = f"{c.code}|{c.program_name}|{c.semester}"
@@ -359,7 +380,7 @@ class RetrievalService:
         ).values_list('code', flat=True)
 
         # Genel/ortak ders prefix'leri — programa özgü değil
-        COMMON_PREFIXES = {'ACU', 'ADS', 'ATA', 'TUR', 'ENG', 'MAT', 'PHY', 'CHE'}
+        COMMON_PREFIXES = {'ACU', 'ADS', 'ATA', 'TUR', 'ENG', 'MAT', 'PHY', 'CHE', 'SYS'}
 
         prefixes = set()
         for code in codes:
