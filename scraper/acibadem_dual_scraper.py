@@ -45,6 +45,20 @@ class AcibademDualScraper:
         ("dok", "PhD",        "https://obs.acibadem.edu.tr/oibs/bologna/unitSelection.aspx?type=dok&lang=tr"),
     ]
 
+    INSTRUCTOR_URLS = [
+        ("https://www.acibadem.edu.tr/akademik/lisans/tip-fakultesi/tip-fakultesi-akademik-kadro-alfabetik-sirayla", "Tıp Fakültesi", "Lisans"),
+        ("https://www.acibadem.edu.tr/akademik/lisans/eczacilik-fakultesi/akademik-kadro", "Eczacılık Fakültesi", "Lisans"),
+        ("https://www.acibadem.edu.tr/akademik/lisans/saglik-bilimleri-fakultesi/akademik-kadro", "Sağlık Bilimleri Fakültesi", "Lisans"),
+        ("https://www.acibadem.edu.tr/akademik/lisans/insan-ve-toplum-bilimleri-fakultesi/akademik-kadro", "İnsan ve Toplum Bilimleri Fakültesi", "Lisans"),
+        ("https://www.acibadem.edu.tr/akademik/lisans/muhendislik-ve-doga-bilimleri-fakultesi/akademik-kadro", "Mühendislik ve Doğa Bilimleri Fakültesi", "Lisans"),
+        ("https://www.acibadem.edu.tr/akademik/onlisans/saglik-hizmetleri-meslek-yuksekokulu/akademik-kadro", "Sağlık Hizmetleri MYO", "Önlisans"),
+        ("https://www.acibadem.edu.tr/akademik/onlisans/meslek-yuksekokulu/akademik-kadro", "Meslek Yüksekokulu", "Önlisans"),
+        ("https://www.acibadem.edu.tr/akademik/lisansustu/saglik-bilimleri-enstitusu/akademik-kadro/yuksek-lisans", "Sağlık Bilimleri Enstitüsü", "Lisansüstü"),
+        ("https://www.acibadem.edu.tr/akademik/lisansustu/sosyal-bilimler-enstitusu/akademik-kadro", "Sosyal Bilimler Enstitüsü", "Lisansüstü"),
+        ("https://www.acibadem.edu.tr/akademik/lisansustu/fen-bilimleri-enstitusu/akademik-kadro", "Fen Bilimleri Enstitüsü", "Lisansüstü"),
+        ("https://www.acibadem.edu.tr/akademik/lisansustu/senoloji-arastirma-enstitusu/akademik-kadro", "Senoloji Araştırma Enstitüsü", "Lisansüstü"),
+    ]
+
     def __init__(self, use_headless: bool = True):
         self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         self.use_headless = use_headless
@@ -63,10 +77,11 @@ class AcibademDualScraper:
                 "pages": [],
             },
             "dynamic_content": {
-                "programs": [],       # OBS'den çekilen program listesi
-                "courses": [],        # Tüm dersler (program+semester bilgisiyle)
-                "curriculum": [],     # Program → yarıyıl → dersler ağacı
+                "programs": [],
+                "courses": [],
+                "curriculum": [],
                 "requirements": [],
+                "instructors": [],
             },
             "merged_data": {
                 "all_programs": [],
@@ -218,14 +233,12 @@ class AcibademDualScraper:
             "source": "acibadem.edu.tr",
         }
         if soup:
-            # Telefon
             phone_pattern = re.compile(r'(\+90[\s\-]?\d{3}[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}|\d{3,4}[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2})')
             for tag in soup.find_all(string=phone_pattern):
                 m = phone_pattern.search(tag)
                 if m:
                     contact["main_phone"] = m.group(0)
                     break
-            # Email
             email_pattern = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
             for tag in soup.find_all(string=email_pattern):
                 m = email_pattern.search(tag)
@@ -283,7 +296,6 @@ class AcibademDualScraper:
                 if key in seen:
                     continue
                 seen.add(key)
-                # Dil tespiti
                 language = "İngilizce" if ("İngilizce" in text or "(English)" in text) else "Türkçe"
                 results.append({
                     "name": text,
@@ -330,17 +342,6 @@ class AcibademDualScraper:
         return ""
 
     def _extract_curriculum_from_program(self, program: Dict) -> Dict:
-        """
-        Bir programın müfredatını çeker.
-        Döner:
-          {
-            program_name: str,
-            program_level: str,
-            semesters: [
-              { semester: int, courses: [ {code, name, credits, type, tul} ] }
-            ]
-          }
-        """
         detail_url = program.get("detail_url", "")
         program_name = program.get("name", "")
         program_level = program.get("level", "")
@@ -376,24 +377,16 @@ class AcibademDualScraper:
 
                     if not cols:
                         continue
-
-                    # Başlık satırı atla
                     if cols[0] in ("Ders Kodu", "Course Code"):
                         continue
-
-                    # Yarıyıl başlığı — "1.Yarıyıl", "2. Semester" vb.
                     if len(cols) == 1 and ("yarıyıl" in cols[0].lower() or
                                            "semester" in cols[0].lower() or
                                            "dönem" in cols[0].lower()):
                         m = re.search(r'(\d+)', cols[0])
                         current_semester = int(m.group(1)) if m else None
                         continue
-
-                    # Toplam satırı atla
                     if "toplam" in cols[0].lower() or "total" in cols[0].lower():
                         continue
-
-                    # Ders satırı — geçerli ders kodu formatı
                     if len(cols) >= 2 and re.search(r"[A-ZÇĞİÖŞÜ]{2,}\s*\d{2,3}", cols[0]):
                         code = cols[0]
                         name = cols[1]
@@ -414,7 +407,6 @@ class AcibademDualScraper:
                             semester_dict[sem] = []
                         semester_dict[sem].append(course_entry)
 
-            # semester_dict'i sıralı listeye çevir
             for sem_num in sorted(semester_dict.keys()):
                 result["semesters"].append({
                     "semester": sem_num,
@@ -430,12 +422,6 @@ class AcibademDualScraper:
         return result
 
     def scrape_dynamic_obs_curriculum(self) -> tuple:
-        """
-        Tüm programların müfredatını çeker.
-        Döner: (curriculum_list, flat_courses_list)
-          - curriculum_list: [{program_name, semesters: [{semester, courses}]}]
-          - flat_courses_list: [{code, name, credits, type, tul, program_name, program_level, semester}]
-        """
         curriculum_list = []
         flat_courses: List[Dict] = []
         seen_courses: Set[str] = set()
@@ -451,11 +437,9 @@ class AcibademDualScraper:
             curriculum = self._extract_curriculum_from_program(program)
             curriculum_list.append(curriculum)
 
-            # Düz ders listesine ekle (program+semester bilgisiyle)
             for sem_data in curriculum.get("semesters", []):
                 sem_num = sem_data.get("semester")
                 for course in sem_data.get("courses", []):
-                    # Unique key: kod + program (aynı ders farklı programlarda olabilir)
                     flat_key = f"{course['code']}|{prog_name}"
                     if flat_key not in seen_courses:
                         seen_courses.add(flat_key)
@@ -474,6 +458,102 @@ class AcibademDualScraper:
         logger.info(f"Total curriculum entries: {len(curriculum_list)}")
         logger.info(f"Total flat courses: {len(flat_courses)}")
         return curriculum_list, flat_courses
+
+    # =========================================================
+    # AKADEMİSYEN SCRAPING
+    # =========================================================
+
+    TITLE_PREFIXES = [
+        "Prof. Dr.", "Doç. Dr.", "Dr. Öğr. Üyesi",
+        "Öğr. Gör. Dr.", "Öğr. Gör.", "Arş. Gör. Dr.",
+        "Arş. Gör.", "Dr.",
+    ]
+
+    SKIP_WORDS = ["fakülte", "bölüm", "enstitü", "program", "yüksekokul"]
+
+    def scrape_instructors(self) -> list:
+        all_instructors = []
+        seen = set()
+
+        for url, faculty_name, level in self.INSTRUCTOR_URLS:
+            logger.info(f"Scraping instructors: {faculty_name} — {url}")
+            soup = self._get_page_source(url, wait_seconds=5)
+            if not soup:
+                logger.warning(f"  Sayfa alınamadı: {url}")
+                continue
+
+            instructors = self._parse_instructor_page(soup, faculty_name, level, url)
+            for inst in instructors:
+                key = f"{inst['name']}|{inst['department']}"
+                if key not in seen:
+                    seen.add(key)
+                    all_instructors.append(inst)
+
+            logger.info(f"  {faculty_name}: {len(instructors)} akademisyen")
+            time.sleep(1)
+
+        logger.info(f"Toplam akademisyen: {len(all_instructors)}")
+        return all_instructors
+
+    def _parse_instructor_page(self, soup: BeautifulSoup, faculty_name: str, level: str, source_url: str) -> list:
+        instructors = []
+
+        card_titles = soup.find_all("div", class_="card-title")
+
+        for card in card_titles:
+            # span içinde "Unvan\n\nİsim" formatı var
+            span = card.find("span", recursive=False)
+            if not span:
+                # departman div'i atla, doğrudan span'ı bul
+                spans = card.find_all("span")
+                # departman span'ı boş olabilir, dolu olanı al
+                span = next((s for s in spans if self._clean_text(s.get_text())), None)
+            
+            if not span:
+                continue
+
+            raw = self._clean_text(span.get_text())
+            if not raw or len(raw) < 3:
+                continue
+
+            # Skip
+            if any(skip in raw.lower() for skip in self.SKIP_WORDS):
+                continue
+
+            # Unvanı ayır
+            name = ""
+            title = ""
+            for prefix in self.TITLE_PREFIXES:
+                if raw.startswith(prefix):
+                    title = prefix
+                    name = raw[len(prefix):].strip()
+                    break
+
+            # Unvan bulunamadıysa atla — isim olmayan metinleri engelle
+            if not title:
+                continue
+
+            # Profil linki
+            profile_url = ""
+            parent_a = card.find_parent("a")
+            if parent_a and parent_a.get("href"):
+                href = parent_a["href"]
+                profile_url = f"https://www.acibadem.edu.tr{href}" if href.startswith("/") else href
+
+            if name and len(name) > 2:
+                instructors.append({
+                    "name": name,
+                    "title": title,
+                    "email": "",
+                    "department": faculty_name,  # departman span boş, fakülte adını kullan
+                    "faculty": faculty_name,
+                    "level": level,
+                    "profile_url": profile_url,
+                    "expertise": "",
+                    "source": source_url,
+                })
+
+        return instructors
 
     # =========================================================
     # MERGE
@@ -520,7 +600,7 @@ class AcibademDualScraper:
         logger.info("=" * 60)
 
         # 1. STATIC
-        logger.info("\n[1/4] Scraping static content...")
+        logger.info("\n[1/5] Scraping static content...")
         self.all_data["static_content"]["general_info"] = self.scrape_static_homepage()
         self.all_data["static_content"]["departments"] = self.scrape_static_departments()
         self.all_data["static_content"]["programs"] = self.scrape_static_programs()
@@ -532,23 +612,30 @@ class AcibademDualScraper:
         logger.info("✓ Static content done")
 
         # 2. PLAYWRIGHT
-        logger.info("\n[2/4] Initializing Playwright...")
+        logger.info("\n[2/5] Initializing Playwright...")
         if not self.init_playwright_driver():
             logger.warning("⚠ Playwright failed, skipping dynamic content")
         else:
-            # 3. DYNAMIC — PROGRAMLAR
-            logger.info("[3/4] Scraping OBS programs...")
+            # 3. OBS PROGRAMLAR
+            logger.info("[3/5] Scraping OBS programs...")
             programs = self.scrape_dynamic_obs_programs()
             self.all_data["dynamic_content"]["programs"] = programs
             self._save_progress(autosave_filename)
 
-            # 4. DYNAMIC — MÜF REDAT + DERSLER
-            logger.info("[4/4] Scraping OBS curriculum & courses...")
+            # 4. MÜFREDAT + DERSLER
+            logger.info("[4/5] Scraping OBS curriculum & courses...")
             curriculum_list, flat_courses = self.scrape_dynamic_obs_curriculum()
             self.all_data["dynamic_content"]["curriculum"] = curriculum_list
             self.all_data["dynamic_content"]["courses"] = flat_courses
+            self._save_progress(autosave_filename)
+
+            # 5. AKADEMİSYENLER
+            logger.info("[5/5] Scraping academic staff...")
+            instructors = self.scrape_instructors()
+            self.all_data["dynamic_content"]["instructors"] = instructors
             self.all_data["metadata"]["dynamic_success"] = bool(programs or flat_courses)
             self._save_progress(autosave_filename)
+            logger.info(f"✓ {len(instructors)} instructors scraped")
 
             self.close_playwright_driver()
             logger.info("✓ Dynamic content done")
@@ -566,6 +653,7 @@ class AcibademDualScraper:
         logger.info(f"Dynamic programs   : {len(self.all_data['dynamic_content']['programs'])}")
         logger.info(f"Curriculum entries : {len(self.all_data['dynamic_content']['curriculum'])}")
         logger.info(f"Flat courses       : {len(self.all_data['dynamic_content']['courses'])}")
+        logger.info(f"Instructors        : {len(self.all_data['dynamic_content']['instructors'])}")
         logger.info(f"Merged programs    : {len(self.all_data['merged_data']['all_programs'])}")
         logger.info("=" * 60 + "\n")
 

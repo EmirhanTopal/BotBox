@@ -14,7 +14,7 @@ class LLMService:
 
     def __init__(self):
         self.ollama_url = os.getenv('OLLAMA_URL', 'http://ollama:11434')
-        self.model = os.getenv('OLLAMA_MODEL', 'mistral')
+        self.model = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
 
     def generate_answer(self, question: str, context: dict) -> dict:
 

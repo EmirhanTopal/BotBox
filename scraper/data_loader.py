@@ -7,7 +7,7 @@ NOT: Aynı ders kodu farklı programlarda farklı kayıt olarak tutulur.
 
 import json
 import logging
-from chat.models import Program, Course, Department, UniversityInfo
+from chat.models import Program, Course, Department, UniversityInfo, Instructor
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,7 @@ class DataLoader:
                 "depts":    self._load_departments(),
                 "programs": self._load_programs(),
                 "courses":  self._load_courses(),
+                "instructors": self._load_instructors(),
             }
             logger.info(f"DB load complete: {counts}")
             return True
@@ -137,4 +138,33 @@ class DataLoader:
                 logger.debug(f"Course skip {code}/{program_name}: {e}")
         
         logger.info(f"Courses loaded: {count}")
+        return count
+    
+    def _load_instructors(self) -> int:
+        
+        instructors = self.data.get('dynamic_content', {}).get('instructors', [])
+        count = 0
+        Instructor.objects.all().delete()
+        for inst in instructors:
+            name = inst.get('name', '').strip()
+            if not name or len(name) < 3:
+                continue
+            try:
+                Instructor.objects.update_or_create(
+                    name=name,
+                    department=inst.get('department', ''),
+                    defaults={
+                        'title':       inst.get('title', ''),
+                        'email':       inst.get('email', ''),
+                        'faculty':     inst.get('faculty', ''),
+                        'expertise':   inst.get('expertise', ''),
+                        'profile_url': inst.get('profile_url', ''),
+                        'level':       inst.get('level', ''),
+                        'source':      inst.get('source', 'acibadem.edu.tr'),
+                    }
+                )
+                count += 1
+            except Exception as e:
+                logger.debug(f"Instructor skip {name}: {e}")
+        logger.info(f"Instructors loaded: {count}")
         return count

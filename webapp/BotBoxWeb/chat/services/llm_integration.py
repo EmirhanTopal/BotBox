@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class LLMService:
     def __init__(self):
         self.ollama_url = os.getenv('OLLAMA_URL', 'http://ollama:11434')
-        self.model = os.getenv('OLLAMA_MODEL', 'mistral')
+        self.model = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
 
     def generate_answer(self, question: str, context: dict) -> dict:
         prompt = self._build_prompt(question, context)
@@ -25,9 +25,9 @@ class LLMService:
                         {"role": "user", "content": prompt}
                     ],
                     "stream": False,
-                    "options": {"temperature": 0.1, "num_predict": 700}
+                    "options": {"temperature": 0.1, "num_predict": 1500, "num_ctx": 4096}
                 },
-                timeout=60
+                timeout=180
             )
             if response.status_code == 200:
                 result = response.json()
@@ -97,7 +97,13 @@ TERMİNOLOJİ: Fakülte=ana birim | Enstitü=lisansüstü | MYO=ön lisans | Bö
                 for sem in sorted(by_sem.keys()):
                     label = f"{sem}. Yarıyıl" if sem else "Yarıyıl Belirsiz"
                     lines.append(f"  [{label}]")
-                    for c in by_sem[sem]:
+
+                    courses = by_sem[sem]
+                    # Zorunluları önce al, hepsini göster
+                    zorunlu = [c for c in courses if c.get('type') == 'Zorunlu']
+                    secmeli = []
+
+                    for c in zorunlu:
                         lines.append(
                             f"    {c['code']} | {c['name']} | {c.get('credits','-')} AKTS | {c.get('type','-')}"
                         )

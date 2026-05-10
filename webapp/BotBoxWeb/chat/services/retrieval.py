@@ -78,14 +78,33 @@ class RetrievalService:
             intents.add('semester')
             intents.add('course')
 
+        # Seçmeli intent'i önce tespit et — program_courses ile çakışmasın
+        elective_keywords = [
+            'seçmeli dersler', 'seçmeli ders', 'elective courses', 'elective',
+            'hangi seçmeli', 'seçmeli neler', 'seçmeli listesi',
+        ]
+        if self._contains_any(q, elective_keywords):
+            intents.add('elective')
+            intents.add('course')
+
+        general_elective_keywords = [
+            'genel seçmeli', 'ortak seçmeli', 'acu dersleri', 'serbest seçmeli',
+            'alan dışı', 'genel kültür', 'university elective', 'general elective',
+        ]
+        if self._contains_any(q, general_elective_keywords):
+            intents.add('general_elective')
+            intents.add('course')
+
         # Program dersleri — yarıyıl belirtmeden
+        # Seçmeli sorusuysa program_courses ekleme
         program_course_keywords = [
             'hangi dersler', 'dersleri neler', 'dersler nelerdir', 'dersler var',
             'müfredatı', 'müfredat nedir', 'ders listesi', 'dersleri göster',
             'what courses', 'courses in', 'curriculum of', 'which courses',
         ]
         if self._contains_any(q, program_course_keywords):
-            intents.add('program_courses')
+            if 'elective' not in intents:
+                intents.add('program_courses')
             intents.add('course')
 
         program_keywords = [
@@ -263,20 +282,118 @@ class RetrievalService:
                 best_score = score
                 best_name = prog_name
 
+        # 3. Token bazlı — sorgu kelimelerinden program adı bul
+        if not best_name or best_score < 70:
+            for prog_name in all_program_names:
+                base_name = re.sub(r'\s*\(.*?\)', '', prog_name).strip()
+                # Program adındaki kelimelerin kaçı sorguda geçiyor?
+                prog_words = set(base_name.lower().split())
+                query_words = set(q_lower.split())
+                common = prog_words & query_words
+                # En az 1 anlamlı kelime eşleşiyorsa ve uzunsa
+                if common and max(len(w) for w in common) >= 5:
+                    score = fuzz.partial_ratio(q_lower, base_name.lower())
+                    if score > best_score:
+                        best_score = score
+                        best_name = prog_name
+
+            return best_name if best_score >= 60 else ""
+
         logger.info(f"Fuzzy match: '{best_name}' score={best_score}")
         return best_name if best_score >= 70 else ""
+    
+        
 
-    def _get_unique_semester_courses(self, course_filter: Q, limit: int = 50) -> list:
-        """code+program_name bazında deduplicate et."""
+    def _get_unique_semester_courses(self, course_filter: Q, limit: int = 50, prog_name: str = '') -> list:
         seen = set()
         unique = []
-        for c in Course.objects.filter(course_filter).order_by('semester', 'type', 'code'):
+
+        # Ortak havuz prefix'leri — hiçbir zaman gösterme
+        COMMON_PREFIXES = {'ACU', 'ADS'}
+
+        # Programa özgü prefix'leri tespit et
+        allowed_prefixes = set()
+        if prog_name:
+            allowed_prefixes = set(self._get_program_prefixes(prog_name))
+            # Zorunlu derslerdeki tüm prefix'leri de ekle (ATA, TUR, ENG vb. zorunlular için)
+            codes = Course.objects.filter(
+                program_name=prog_name, type='Zorunlu'
+            ).values_list('code', flat=True)
+            for code in codes:
+                m = re.match(r'^([A-Z]+)', code)
+                if m:
+                    allowed_prefixes.add(m.group(1))
+
+        qs = Course.objects.filter(course_filter).exclude(
+            semester__isnull=True
+        ).order_by('semester', 'type', 'code')
+
+        for c in qs:
+            # Ortak havuzu her zaman filtrele
+            prefix_match = re.match(r'^([A-Z]+)', c.code)
+            if not prefix_match:
+                continue
+            prefix = prefix_match.group(1)
+
+            if prefix in COMMON_PREFIXES:
+                continue
+
+            # Program belirtilmişse sadece o programa ait prefix'lere izin ver
+            if allowed_prefixes and prefix not in allowed_prefixes:
+                continue
+
             key = f"{c.code}|{c.program_name}|{c.semester}"
             if key not in seen:
                 seen.add(key)
                 unique.append(c)
             if len(unique) >= limit:
                 break
+
+        return unique
+
+    def _get_program_prefixes(self, prog_name: str) -> list:
+        """Programın zorunlu derslerinden programa özgü prefix'leri tespit et."""
+        codes = Course.objects.filter(
+            program_name=prog_name,
+            type='Zorunlu'
+        ).values_list('code', flat=True)
+
+        # Genel/ortak ders prefix'leri — programa özgü değil
+        COMMON_PREFIXES = {'ACU', 'ADS', 'ATA', 'TUR', 'ENG', 'MAT', 'PHY', 'CHE'}
+
+        prefixes = set()
+        for code in codes:
+            m = re.match(r'^([A-Z]+)', code)
+            if m:
+                prefix = m.group(1)
+                if prefix not in COMMON_PREFIXES:
+                    prefixes.add(prefix)
+
+        logger.info(f"Program prefixes for '{prog_name}': {prefixes}")
+        return list(prefixes)
+
+    def _get_program_elective_courses(self, prog_name: str, limit: int = 30) -> list:
+        """Programa özgü seçmeli dersleri getir."""
+        prefixes = self._get_program_prefixes(prog_name)
+        if not prefixes:
+            return []
+
+        prefix_filter = Q()
+        for prefix in prefixes:
+            prefix_filter |= Q(code__startswith=prefix)
+
+        seen = set()
+        unique = []
+        for c in Course.objects.filter(
+            program_name=prog_name,
+            type='Seçmeli'
+        ).filter(prefix_filter).order_by('semester', 'code'):
+            if c.code not in seen:
+                seen.add(c.code)
+                unique.append(c)
+            if len(unique) >= limit:
+                break
+
         return unique
 
     def retrieve(self, question: str) -> dict:
@@ -342,12 +459,12 @@ class RetrievalService:
             if prog_name:
                 course_filter &= Q(program_name=prog_name)
 
-            unique_courses = self._get_unique_semester_courses(course_filter)
+            unique_courses = self._get_unique_semester_courses(course_filter, prog_name=prog_name)
 
             if not unique_courses and prog_name:
                 course_filter2 = Q(semester=sem_num) if sem_num else Q()
                 course_filter2 &= Q(program_name__icontains=prog_name[:15])
-                unique_courses = self._get_unique_semester_courses(course_filter2)
+                unique_courses = self._get_unique_semester_courses(course_filter2, prog_name=prog_name)
 
             if unique_courses:
                 context["semester_courses"] = {
@@ -375,19 +492,20 @@ class RetrievalService:
                         context["sources"].append("Programs Database")
 
         # =====================
-        # PROGRAM DERSLERİ — yarıyıl belirtmeden tüm müfredat
+        # PROGRAM DERSLERİ — yarıyıl belirtmeden tüm zorunlu müfredat
+        # elective sorusuysa bu bloğa girme
         # =====================
-        if 'program_courses' in intents and 'semester' not in intents:
+        if 'program_courses' in intents and 'semester' not in intents and 'elective' not in intents:
             prog_name = self._extract_program_name_from_query(q)
             logger.info(f"Program courses query: prog='{prog_name}'")
 
             if prog_name:
                 unique_courses = self._get_unique_semester_courses(
-                    Q(program_name=prog_name), limit=60
+                    Q(program_name=prog_name), limit=60, prog_name=prog_name
                 )
                 if not unique_courses:
                     unique_courses = self._get_unique_semester_courses(
-                        Q(program_name__icontains=prog_name[:15]), limit=60
+                        Q(program_name__icontains=prog_name[:15]), limit=60, prog_name=prog_name
                     )
 
                 if unique_courses:
@@ -413,6 +531,49 @@ class RetrievalService:
                     ]
                     if "Programs Database" not in context["sources"]:
                         context["sources"].append("Programs Database")
+
+        # =====================
+        # PROGRAM SEÇMELİLERİ
+        # =====================
+        if 'elective' in intents and 'general_elective' not in intents:
+            prog_name = self._extract_program_name_from_query(q)
+            if prog_name:
+                elective_courses = self._get_program_elective_courses(prog_name)
+                if elective_courses:
+                    context["semester_courses"] = {
+                        "semester": None,
+                        "program": prog_name,
+                        "all_semesters": True,
+                        "courses": [
+                            {"code": c.code, "name": c.name, "credits": c.credits,
+                             "type": c.type, "semester": c.semester,
+                             "program_name": c.program_name}
+                            for c in elective_courses
+                        ]
+                    }
+                    context["sources"].append("Seçmeli Dersler")
+
+        # =====================
+        # GENEL SEÇMELİ (ACU kodlu ortak havuz)
+        # =====================
+        if 'general_elective' in intents:
+            seen = set()
+            unique = []
+            for c in Course.objects.filter(
+                type='Seçmeli',
+                code__startswith='ACU'
+            ).order_by('code'):
+                if c.code not in seen:
+                    seen.add(c.code)
+                    unique.append(c)
+                if len(unique) >= 50:
+                    break
+            context["courses"] = [
+                {"code": c.code, "name": c.name, "credits": c.credits, "type": c.type}
+                for c in unique
+            ]
+            if context["courses"]:
+                context["sources"].append("Genel Seçmeli Dersler")
 
         # DEPARTMENT LIST
         if 'list' in intents and 'department' in intents:
@@ -462,7 +623,10 @@ class RetrievalService:
                         context["departments"].append(f)
 
         # COURSE SEARCH
-        if 'course' in intents and 'semester' not in intents and 'program_courses' not in intents:
+        if 'course' in intents and 'semester' not in intents and \
+                'program_courses' not in intents and \
+                'elective' not in intents and \
+                'general_elective' not in intents:
             if 'list' in intents:
                 seen = set()
                 unique = []

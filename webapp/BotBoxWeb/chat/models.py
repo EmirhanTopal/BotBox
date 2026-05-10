@@ -83,6 +83,27 @@ class Course(models.Model):
         return f"{self.code} - {self.name}{sem}{prog}"
 
 
+class Instructor(models.Model):
+    name = models.CharField(max_length=200)
+    title = models.CharField(max_length=100, blank=True)
+    email = models.EmailField(blank=True)
+    department = models.CharField(max_length=300, blank=True)
+    faculty = models.CharField(max_length=300, blank=True)
+    expertise = models.TextField(blank=True)
+    profile_url = models.URLField(blank=True)
+    level = models.CharField(max_length=50, blank=True)  # Lisans/Önlisans/Lisansüstü
+    source = models.CharField(max_length=100, default='acibadem.edu.tr')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['faculty', 'department', 'name']
+        unique_together = [['name', 'department']]
+
+    def __str__(self):
+        return f"{self.title} {self.name} — {self.department}"
+
+
 class ChatMessage(models.Model):
     question = models.TextField()
     answer = models.TextField()
