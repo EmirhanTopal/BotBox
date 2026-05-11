@@ -33,6 +33,10 @@ def chat(request, session_id=None):
         # =====================
         if session_id:
             session, _ = ChatSession.objects.get_or_create(id=session_id)
+            # İlk mesajda başlığı güncelle
+            if session.title in ('Yeni Sohbet', '', None):
+                session.title = question[:50]
+                session.save(update_fields=['title'])
         else:
             session = None
 
