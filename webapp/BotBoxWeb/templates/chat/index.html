@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ACU Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #13161d;
+      --surface2:  #1a1e28;
+      --border:    #252a38;
+      --accent:    #4f6ef7;
+      --accent2:   #7c3aed;
+      --gold:      #c9a84c;
+      --text:      #e8eaf0;
+      --muted:     #6b7280;
+      --bot-bg:    #161b27;
+      --user-bg:   #1e2540;
+      --radius:    14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ── APP SHELL ── */
+    .app { display: flex; height: 100vh; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 272px;
+      min-width: 272px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
+
+    .sidebar-header {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(79,110,247,0.3);
+    }
+
+    .brand-text { line-height: 1.2; }
+    .brand-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1rem;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+    .brand-sub {
+      font-size: 0.68rem;
+      color: var(--muted);
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .new-btn {
+      width: 100%;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.2s, transform 0.15s;
+      box-shadow: 0 4px 14px rgba(79,110,247,0.25);
+    }
+    .new-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .new-btn:active { transform: translateY(0); }
+
+    .history-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 10px;
+    }
+    .history-section::-webkit-scrollbar { width: 3px; }
+    .history-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .history-label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 8px 8px;
+      font-weight: 500;
+    }
+
+    .s-item {
+      display: block;
+      padding: 9px 12px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 0.83rem;
+      color: #9ba3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+      margin-bottom: 2px;
+    }
+    .s-item:hover { background: var(--surface2); color: var(--text); }
+    .s-item.active {
+      background: var(--surface2);
+      color: var(--text);
+      border-left: 2px solid var(--accent);
+      padding-left: 10px;
+    }
+
+    .no-session-txt {
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 8px 12px;
+      font-style: italic;
+    }
+
+    .sidebar-footer {
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e88;
+      flex-shrink: 0;
+    }
+
+    /* ── MAIN CHAT ── */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    /* ── EMPTY SCREEN ── */
+    .empty-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 40px 20px;
+      text-align: center;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .empty-hero {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(79,110,247,0.3);
+    }
+
+    .empty-screen h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.7rem;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .empty-screen p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      max-width: 420px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      max-width: 620px;
+    }
+
+    .chip {
+      padding: 9px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.82rem;
+      color: #9ba3b8;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .chip:hover {
+      background: var(--surface);
+      border-color: var(--accent);
+      color: var(--text);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(79,110,247,0.15);
+    }
+
+    /* ── MESSAGES ── */
+    .messages-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 0 8px;
+      display: flex;
+      flex-direction: column;
+      scroll-behavior: smooth;
+    }
+    .messages-wrap::-webkit-scrollbar { width: 4px; }
+    .messages-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .msg-row {
+      padding: 12px 10%;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      animation: msgIn 0.3s ease both;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-row.user {
+      justify-content: flex-end;
+    }
+
+    .msg-row.bot {
+      background: var(--bot-bg);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .av {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .msg-row.user .av {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      order: 2;
+      box-shadow: 0 3px 10px rgba(79,110,247,0.3);
+    }
+
+    .msg-row.bot .av {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+
+    .msg-bubble {
+      max-width: 640px;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .msg-row.user .msg-bubble {
+      background: var(--user-bg);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 16px 4px 16px 16px;
+      text-align: left;
+    }
+
+    .msg-row.bot .msg-bubble {
+      padding-top: 4px;
+    }
+
+    /* ── TYPING ── */
+    .typing-row {
+      padding: 14px 10%;
+      display: none;
+      gap: 12px;
+      align-items: center;
+      background: var(--bot-bg);
+      border-top: 1px solid var(--border);
+    }
+
+    .dots { display: flex; gap: 5px; align-items: center; }
+    .dot {
+      width: 7px; height: 7px;
+      background: var(--muted);
+      border-radius: 50%;
+      animation: pulse 1.2s ease infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+      30% { opacity: 1; transform: scale(1.1); }
+    }
+
+    /* ── INPUT ── */
+    .input-area {
+      padding: 14px 10% 18px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+
+    .input-box {
+      display: flex;
+      align-items: flex-end;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      gap: 10px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-box:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,110,247,0.12);
+    }
+
+    .input-box textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 0.92rem;
+      font-family: 'DM Sans', sans-serif;
+      resize: none;
+      max-height: 140px;
+      line-height: 1.55;
+      font-weight: 400;
+    }
+    .input-box textarea::placeholder { color: var(--muted); }
+
+    .send-btn {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 9px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.2s, transform 0.15s;
+      box-shadow: 0 3px 10px rgba(79,110,247,0.3);
+    }
+    .send-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .send-btn:active { transform: translateY(0); }
+    .send-btn:disabled { background: var(--surface2); box-shadow: none; cursor: not-allowed; }
+    .send-btn svg { width: 15px; height: 15px; }
+
+    .input-hint {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── DIVIDER ── */
+    .day-divider {
+      text-align: center;
+      margin: 8px 0;
+      font-size: 0.72rem;
+      color: var(--muted);
+      position: relative;
+    }
+    .day-divider::before, .day-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 30%;
+      height: 1px;
+      background: var(--border);
+    }
+    .day-divider::before { left: 10%; }
+    .day-divider::after { right: 10%; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="brand-logo">🎓</div>
+        <div class="brand-text">
+          <div class="brand-name">ACU Assistant</div>
+          <div class="brand-sub">Acıbadem University</div>
+        </div>
+      </div>
+      <button class="new-btn" onclick="createSession()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Yeni Sohbet
+      </button>
+    </div>
+
+    <div class="history-section">
+      <div class="history-label">Geçmiş</div>
+      {% for s in sessions %}
+        <a href="/session/{{ s.id }}/"
+           class="s-item {% if current_session and current_session.id == s.id %}active{% endif %}">
+          {{ s.title|truncatechars:32 }}
+        </a>
+      {% empty %}
+        <div class="no-session-txt">Henüz sohbet yok.</div>
+      {% endfor %}
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="status-dot"></div>
+      llama3.1:8b · Çevrimiçi
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="chat-area" data-session-id="{% if current_session %}{{ current_session.id }}{% endif %}">
+
+    {% if not current_session %}
+    <div class="empty-screen">
+      <div class="empty-hero">🎓</div>
+      <h2>ACU'ya Hoş Geldiniz</h2>
+      <p>Acıbadem Üniversitesi hakkında merak ettiğiniz her şeyi sorabilirsiniz. Programlar, dersler, başvuru, burs ve daha fazlası.</p>
+      <div class="chips">
+        <div class="chip" onclick="chipClick(this)">Bilgisayar Mühendisliği programı hakkında bilgi ver</div>
+        <div class="chip" onclick="chipClick(this)">Hangi fakülteler mevcut?</div>
+        <div class="chip" onclick="chipClick(this)">Kabul ve başvuru şartları nelerdir?</div>
+        <div class="chip" onclick="chipClick(this)">Burs imkânları var mı?</div>
+        <div class="chip" onclick="chipClick(this)">İletişim bilgileri nelerdir?</div>
+        <div class="chip" onclick="chipClick(this)">What English-medium programs are available?</div>
+        <div class="chip" onclick="chipClick(this)">Tüm lisans programlarını listele</div>
+        <div class="chip" onclick="chipClick(this)">Kampüs olanakları nelerdir?</div>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="messages-wrap" id="msgsWrap">
+      {% for msg in messages %}
+      <div class="msg-row {{ msg.role }}">
+        <div class="av">{% if msg.role == 'user' %}👤{% else %}🎓{% endif %}</div>
+        <div class="msg-bubble">{{ msg.content }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="typing-row" id="typingRow">
+      <div class="av" style="background:var(--surface2); border:1px solid var(--border);">🎓</div>
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="input-area">
+      <div class="input-box">
+        <textarea id="msgInput" rows="1"
+          placeholder="Bir şey sorun… / Ask anything…"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="send()">
+          <svg viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">Enter → gönder &nbsp;·&nbsp; Shift+Enter → yeni satır</div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  const CHAT_AREA = document.querySelector('.chat-area');
+  const SID = CHAT_AREA.dataset.sessionId ? Number(CHAT_AREA.dataset.sessionId) : null;
+  const CSRF = '{{ csrf_token }}';
+
+  function csrfHeaders() {
+    return { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF };
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  }
+
+  async function createSession() {
+    const r = await fetch('/session/new/', { method: 'POST', headers: csrfHeaders(), credentials: 'same-origin' });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error || 'Sohbet oluşturulamadı.'); return; }
+    location.href = `/session/${d.session_id}/`;
+  }
+
+  async function chipClick(el) {
+    const txt = el.textContent.trim();
+    const r = await fetch('/session/new/', { method: 'POST', headers: csrfHeaders(), credentials: 'same-origin' });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error || 'Sohbet oluşturulamadı.'); return; }
+    sessionStorage.setItem('pending', txt);
+    location.href = `/session/${d.session_id}/`;
+  }
+
+  function scrollDown() {
+    const w = document.getElementById('msgsWrap');
+    if (w) w.scrollTop = w.scrollHeight;
+  }
+
+  function addMsg(role, text) {
+    const w = document.getElementById('msgsWrap');
+    if (!w) return;
+    const row = document.createElement('div');
+    row.className = `msg-row ${role}`;
+    const av = document.createElement('div');
+    av.className = 'av';
+    av.textContent = role === 'user' ? '👤' : '🎓';
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = text;
+    row.appendChild(av);
+    row.appendChild(bubble);
+    w.appendChild(row);
+    scrollDown();
+  }
+
+  async function send() {
+    const inp = document.getElementById('msgInput');
+    const btn = document.getElementById('sendBtn');
+    const q = inp.value.trim();
+    if (!q) return;
+
+    if (!SID) {
+      sessionStorage.setItem('pending', q);
+      await createSession();
+      return;
+    }
+
+    inp.value = '';
+    inp.style.height = 'auto';
+    btn.disabled = true;
+    addMsg('user', q);
+
+    const tr = document.getElementById('typingRow');
+    if (tr) { tr.style.display = 'flex'; scrollDown(); }
+
+    try {
+      const r = await fetch(`/api/chat/${SID}/`, {
+        method: 'POST',
+        headers: csrfHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify({ question: q })
+      });
+      const d = await r.json();
+      if (tr) tr.style.display = 'none';
+      addMsg('bot', r.ok ? (d.answer || 'Cevap alınamadı.') : '⚠️ ' + (d.error || 'Hata oluştu.'));
+
+      // Sidebar başlığı güncelle
+      const active = document.querySelector('.s-item.active');
+      if (active && (active.textContent.trim() === 'Yeni Sohbet' || active.textContent.trim() === '')) {
+        active.textContent = q.substring(0, 32) + (q.length > 32 ? '…' : '');
+      }
+    } catch {
+      if (tr) tr.style.display = 'none';
+      addMsg('bot', '⚠️ Sunucuya bağlanılamadı.');
+    }
+
+    btn.disabled = false;
+    inp.focus();
+  }
+
+  window.addEventListener('load', () => {
+    scrollDown();
+    const p = sessionStorage.getItem('pending');
+    if (p && SID) {
+      sessionStorage.removeItem('pending');
+      document.getElementById('msgInput').value = p;
+      send();
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama          # web-deployment'taki OLLAMA_URL: http://ollama:11434 ile eşleşiyor
+spec:
+  selector:
+    app: ollama
+  ports:
+    - port: 11434
+      targetPort: 11434
+  type: ClusterIP       # cluster içinden erişim yeterli, dışarı açmaya gerek yok
+ 

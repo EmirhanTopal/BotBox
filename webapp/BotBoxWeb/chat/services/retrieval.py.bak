@@ -1,0 +1,262 @@
+"""Information retrieval service"""
+
+import logging
+from django.db.models import Q
+from chat.models import Program, Course, Department, UniversityInfo
+from rapidfuzz import fuzz
+from .vector_store import VectorStore
+
+logger = logging.getLogger(__name__)
+
+
+class RetrievalService:
+    """Retrieve relevant information from database"""
+
+    def __init__(self):
+        self.max_results = 5
+        # Singleton — her request'te aynı (build edilmiş) instance gelir
+        self.vector_store = VectorStore()
+
+    # =====================
+    # FUZZY CHECK
+    # =====================
+    def _contains_any(self, text: str, keywords: list, threshold: int = 70) -> bool:
+        text_lower = text.lower()
+        words = text_lower.split()
+
+        for keyword in keywords:
+            keyword_lower = keyword.lower()
+
+            if keyword_lower in text_lower:
+                return True
+
+            for word in words:
+                if fuzz.ratio(word, keyword_lower) >= threshold:
+                    return True
+
+        return False
+
+    # =====================
+    # FUZZY DB SEARCH
+    # =====================
+    def _search_db_fuzzy(self, model, question: str, fields: list):
+        q_filter = Q()
+        for field in fields:
+            q_filter |= Q(**{f"{field}__icontains": question})
+
+        results = list(model.objects.filter(q_filter)[:self.max_results])
+        if results:
+            return results
+
+        all_items = model.objects.all()
+        scored = []
+
+        for item in all_items:
+            score = 0
+            for field in fields:
+                val = getattr(item, field, '') or ''
+                score = max(score, fuzz.partial_ratio(question.lower(), val.lower()))
+
+            if score >= 50:
+                scored.append((score, item))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [item for _, item in scored[:self.max_results]]
+
+    # =====================
+    # MAIN RETRIEVE FUNCTION
+    # =====================
+    def retrieve(self, question: str) -> dict:
+
+        q = question.lower()
+
+        context = {
+            "programs": [],
+            "courses": [],
+            "departments": [],
+            "general_info": None,
+            "summary": None,
+            "sources": [],
+            "semantic": []
+        }
+
+        # =====================
+        # KEYWORDS — Türkçe + İngilizce genişletildi
+        # =====================
+        program_keywords = [
+            # İngilizce
+            'program', 'degree', 'bachelor', 'master', 'phd',
+            'engineering', 'science', 'medicine', 'nursing', 'computer',
+            'software', 'pharmacy', 'faculty',
+            # Türkçe
+            'lisans', 'yüksek lisans', 'doktora', 'fakülte', 'bölüm',
+            'mühendislik', 'mühendisliği', 'bilgisayar', 'yazılım',
+            'tıp', 'eczacılık', 'hemşirelik', 'psikoloji', 'beslenme',
+            'fizik', 'kimya', 'matematik', 'biyoloji', 'mimarlık',
+            'işletme', 'hukuk', 'eğitim', 'iletişim',
+        ]
+
+        dept_keywords = [
+            # İngilizce
+            'department', 'faculty', 'school', 'institute', 'division',
+            # Türkçe
+            'bölüm', 'fakülte', 'enstitü', 'okul', 'müdürlük',
+        ]
+
+        course_keywords = [
+            # İngilizce
+            'course', 'class', 'lecture', 'subject', 'syllabus', 'credit',
+            # Türkçe
+            'ders', 'kredi', 'müfredat', 'ödev', 'sınav', 'not',
+        ]
+
+        general_keywords = [
+            # İngilizce
+            'university', 'about', 'contact', 'location', 'address',
+            'phone', 'email', 'mission', 'vision', 'history',
+            # Türkçe
+            'üniversite', 'hakkında', 'iletişim', 'adres', 'telefon',
+            'misyon', 'vizyon', 'tarihçe', 'kampüs',
+        ]
+
+        # =====================
+        # SEMANTIC SEARCH
+        # Her zaman çalışır — keyword bağımsız
+        # =====================
+        try:
+            semantic_results = self.vector_store.search(question)
+
+            for typ, obj in semantic_results:
+                if typ == "program":
+                    context["semantic"].append({
+                        "type": "program",
+                        "name": obj.name,
+                        "level": obj.level,
+                        "desc": obj.description or ""
+                    })
+                elif typ == "course":
+                    context["semantic"].append({
+                        "type": "course",
+                        "name": obj.name,
+                        "code": obj.code or ""
+                    })
+                elif typ == "department":
+                    context["semantic"].append({
+                        "type": "department",
+                        "name": obj.name,
+                        "desc": obj.description or ""
+                    })
+
+            if context["semantic"]:
+                context["sources"].append("Semantic Search")
+
+        except Exception as e:
+            logger.error(f"Semantic search failed: {e}")
+
+        # =====================
+        # PROGRAMS
+        # =====================
+        if self._contains_any(q, program_keywords):
+            results = self._search_db_fuzzy(Program, q, ['name', 'description', 'department'])
+
+            context["programs"] = [
+                {
+                    "name": p.name,
+                    "level": p.level,
+                    "department": str(p.department),
+                    "description": p.description or ""
+                }
+                for p in results
+            ]
+
+            if context["programs"]:
+                context["sources"].append("Programs Database")
+
+        # =====================
+        # DEPARTMENTS
+        # =====================
+        if self._contains_any(q, dept_keywords):
+            results = self._search_db_fuzzy(Department, q, ['name', 'description'])
+
+            context["departments"] = [
+                {
+                    "name": d.name,
+                    "description": d.description or "",
+                    "email": d.email or "",
+                    "phone": d.phone or ""
+                }
+                for d in results
+            ]
+
+            if context["departments"]:
+                context["sources"].append("Departments Database")
+
+        # =====================
+        # COURSES
+        # =====================
+        if self._contains_any(q, course_keywords):
+            results = self._search_db_fuzzy(Course, q, ['name', 'code'])
+
+            context["courses"] = [
+                {
+                    "code": c.code,
+                    "name": c.name,
+                    "credits": c.credits,
+                    "type": c.type
+                }
+                for c in results
+            ]
+
+            if context["courses"]:
+                context["sources"].append("Courses Database")
+
+        # =====================
+        # GENERAL INFO
+        # =====================
+        if self._contains_any(q, general_keywords):
+            uni = UniversityInfo.objects.first()
+
+            if uni:
+                context["general_info"] = {
+                    "title": uni.title,
+                    "description": uni.description,
+                    "mission": uni.mission,
+                    "vision": uni.vision,
+                    "phone": uni.phone,
+                    "email": uni.email
+                }
+
+                context["sources"].append("University Information")
+
+        # =====================
+        # FALLBACK
+        # Hiçbir kaynak bulunamazsa bile semantic'ten gelen
+        # sonuçlar varsa onları kullan, yoksa genel bilgi ver.
+        # =====================
+        if not context["sources"]:
+            logger.info("RetrievalService: Hiçbir kaynak bulunamadı, fallback devrede.")
+
+            uni = UniversityInfo.objects.first()
+            if uni:
+                context["general_info"] = {
+                    "title": uni.title,
+                    "description": uni.description,
+                    "mission": uni.mission,
+                    "vision": uni.vision,
+                    "phone": uni.phone,
+                    "email": uni.email
+                }
+
+            context["programs"] = [
+                {
+                    "name": p.name,
+                    "level": p.level,
+                    "department": str(p.department),
+                    "description": p.description or ""
+                }
+                for p in Program.objects.all()[:3]
+            ]
+
+            context["sources"].append("Fallback Data")
+
+        return context
