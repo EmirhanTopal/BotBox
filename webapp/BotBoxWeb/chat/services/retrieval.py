@@ -223,17 +223,45 @@ class RetrievalService:
         if self._contains_any(q, instructor_keywords):
             intents.add('instructor')
 
+        # İsim bazlı akademisyen sorgusu
+        from chat.models import Instructor
+        words = [w for w in q.split() if len(w) > 3]
+        for word in words:
+            if Instructor.objects.filter(name__icontains=word).exists():
+                intents.add('instructor')
+                break
+
         return intents
 
     def _get_faculty_program_map(self) -> list:
-        all_programs = Program.objects.exclude(department='').exclude(department__isnull=True)
+        from chat.models import Instructor
+        
+        # Program tablosundan fakülteler
+        prog_depts = set(
+            Program.objects.exclude(department='')
+            .exclude(department__isnull=True)
+            .values_list('department', flat=True)
+        )
+        
+        # Akademisyen tablosundan fakülteler
+        inst_faculties = set(
+            Instructor.objects.exclude(faculty='')
+            .values_list('faculty', flat=True)
+        )
+        
+        # İkisini birleştir
+        all_faculties = prog_depts | inst_faculties
+        
+        # Her fakülte için program listesi
         grouped = defaultdict(list)
-        for p in all_programs:
+        for p in Program.objects.exclude(department=''):
             grouped[p.department].append(p.name)
+        
         result = []
-        for dept_name in sorted(grouped.keys()):
-            desc = ", ".join(grouped[dept_name])
+        for dept_name in sorted(all_faculties):
+            desc = ", ".join(grouped.get(dept_name, []))
             result.append({"name": dept_name, "description": desc, "email": "", "phone": ""})
+        
         return result
 
     def _extract_semester_number(self, q: str) -> int | None:
@@ -711,25 +739,30 @@ class RetrievalService:
         # AKADEMİSYENLER
         if 'instructor' in intents:
             from chat.models import Instructor
-    
-            # Önce sorgu metninde fakülte adı ara
-            q_original = question  # orijinal soruyu kullan
-            instructors = Instructor.objects.filter(
-                faculty__icontains=q_original.split()[0]  # ilk kelime yeterli değil
-            )
-            
-            # Daha iyi: sorgunun tüm kelimeleriyle dene
-            words = [w for w in question.split() if len(w) > 4]
-            faculty_filter = Q()
-            for word in words:
-                faculty_filter |= Q(faculty__icontains=word)
-            
-            instructors = Instructor.objects.filter(faculty_filter).order_by('name')[:20]
-            
+
+            # İsim bazlı arama — "Ahmet Bulut kimdir" gibi sorgular
+            name_filter = Q()
+            for word in [w for w in question.split() if len(w) > 3]:
+                name_filter |= Q(name__icontains=word)
+            instructors = Instructor.objects.filter(name_filter).order_by('name')[:5]
+
+            # İsim bulunamazsa fakülte bazlı arama
+            if not instructors.exists():
+                words = [w for w in question.split() if len(w) > 4]
+                faculty_filter = Q()
+                for word in words:
+                    faculty_filter |= Q(faculty__icontains=word)
+                instructors = Instructor.objects.filter(faculty_filter).order_by('name')[:20]
+
             if instructors.exists():
                 context["instructors"] = [
-                    {"name": i.name, "title": i.title, 
-                    "faculty": i.faculty, "level": i.level}
+                    {
+                        "name": i.name,
+                        "title": i.title,
+                        "faculty": i.faculty,
+                        "department": i.department,
+                        "level": i.level,
+                    }
                     for i in instructors
                 ]
                 context["sources"].append("Akademik Kadro")
