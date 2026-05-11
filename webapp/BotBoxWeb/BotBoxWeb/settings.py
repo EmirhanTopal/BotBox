@@ -47,22 +47,32 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'BotBoxWeb.wsgi.application'
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "botboxdb"),
-        "USER": os.environ.get("DB_USER", "postgres"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "postgres"),
-        "HOST": os.environ.get("DB_HOST", "db"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
+# Test ortamında SQLite, production'da PostgreSQL
+if os.environ.get('TESTING'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "botboxdb"),
+            "USER": os.environ.get("DB_USER", "postgres"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", "postgres"),
+            "HOST": os.environ.get("DB_HOST", "db"),
+            "PORT": os.environ.get("DB_PORT", "5432"),
+        }
+    }
 
 TIME_ZONE = 'UTC'
+USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://ollama:11434')
-OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'gemma:2b')
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3.1:8b')

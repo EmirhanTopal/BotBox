@@ -1,24 +1,29 @@
 import sys
 import os
 
-# 1. Path'leri ayarla
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'webapp/BotBoxWeb')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'webapp')))
 
-# 2. Settings modülünü belirt
-os.environ['DJANGO_SETTINGS_MODULE'] = 'BotBoxWeb.settings'
+# Django settings
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'BotBoxWeb.settings')
+os.environ.setdefault('TESTING', '1')
 
-# 3. Settings yüklenmeden önce DB'yi override et
+import django
 from django.conf import settings
 
-# Settings'i yükle ama setup() henüz çağırma
-settings.DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
-    }
-}
-
-# 4. Şimdi setup() çağır
-import django
-django.setup()
+if not settings.configured:
+    settings.configure(
+        DATABASES={
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': ':memory:',
+            }
+        },
+        INSTALLED_APPS=[
+            'django.contrib.contenttypes',
+            'django.contrib.auth',
+            'chat',
+        ],
+        DEFAULT_AUTO_FIELD='django.db.backends.BigAutoField',
+    )
+    django.setup()
